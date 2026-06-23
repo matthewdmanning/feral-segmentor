@@ -1,0 +1,7 @@
+defaults:
+  - base_inference
+  - _self_
+
+threshold: 0.5
+device: cpu
+tta: false

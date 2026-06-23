@@ -1,0 +1,25 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# MLflow
+mlruns/
+mlflow.db
+
+*local
+
+# DVC-tracked data and model artifacts
+/data/**
+!/data/**/.gitkeep
+/models/**
+!/models/**/.gitkeep
+.claude/**
+CLAUDE.md
+outputs/2026-06-22/11-53-58/hub_fetch.log

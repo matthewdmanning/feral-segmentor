@@ -1,0 +1,49 @@
+stages:
+  fetch:
+    cmd: uv run python -m feral_segmenter.data.fetch
+    outs:
+      - data/raw
+
+  augment:
+    cmd: uv run python -m feral_segmenter.data.augmentations
+    deps:
+      - data/raw
+    outs:
+      - data/augmented
+
+  preprocess:
+    cmd: uv run python -m feral_segmenter.data.transforms
+    deps:
+      - data/raw
+    outs:
+      - data/processed
+
+  acquire_model:
+    cmd: uv run python -m feral_segmenter.models.acquire
+    deps:
+      - conf
+    outs:
+      - models/checkpoints
+
+  train:
+    cmd: uv run python -m feral_segmenter.training.trainer
+    deps:
+      - data/processed
+      - models/checkpoints
+      - conf
+    outs:
+      - models/registry/best.pt
+
+  evaluate:
+    cmd: uv run python -m feral_segmenter.training.metrics
+    deps:
+      - models/registry/best.pt
+    metrics:
+      - metrics.json
+
+  export:
+    cmd: uv run python -m feral_segmenter.inference.predictor
+    deps:
+      - models/registry/best.pt
+    outs:
+      - models/registry/onnx

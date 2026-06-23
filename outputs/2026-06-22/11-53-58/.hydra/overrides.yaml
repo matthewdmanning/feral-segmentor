@@ -1,0 +1,2 @@
+- model=superanimal_bird
+- model.files=[superanimal_bird_resnet_50.pt]

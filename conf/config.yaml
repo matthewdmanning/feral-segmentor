@@ -1,0 +1,8 @@
+defaults:
+  - data: default
+  - model: default
+  - train: default
+  - inference: default
+  - tracking: mlflow
+  - augmentation: default
+  - _self_

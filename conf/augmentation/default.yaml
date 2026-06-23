@@ -1,0 +1,6 @@
+defaults:
+  - base_augmentation
+  - _self_
+
+name: AugmentationSet1_without_gamma
+ops: []
