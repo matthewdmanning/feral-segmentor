@@ -1,6 +1,6 @@
 import pytest
 
-from feral_segmenter import pipeline
+from feral_segmentor import pipeline
 
 
 def test_segment_not_implemented():

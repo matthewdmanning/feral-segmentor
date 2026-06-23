@@ -1,6 +1,0 @@
-defaults:
-  - base_tracking
-  - _self_
-
-tracking_uri: sqlite:///mlflow.db
-experiment_name: feral-segmenter

@@ -1,0 +1,47 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  release-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7.2.0
+        with:
+          python-version: "{{ cookiecutter.python_version }}"
+          enable-cache: true
+
+      - name: Sync dependencies (runtime + dev)
+        run: |
+          uv sync --group dev
+
+      - name: Run tests
+        run: |
+          uv run pytest -m "not gpu and not slow"
+
+      - name: Type check
+        run: |
+          uv run mypy src tests
+
+      - name: Build package
+        run: |
+          uv build
+
+      # Optional: publish to PyPI (per-project opt-in)
+      # - name: Publish to PyPI
+      #   if: startsWith(github.ref, 'refs/tags/v')
+      #   env:
+      #     UV_PUBLISH_TOKEN: {% raw %}${{ secrets.PYPI_API_TOKEN }}{% endraw %}
+      #   run: |
+      #     uv publish --token $UV_PUBLISH_TOKEN

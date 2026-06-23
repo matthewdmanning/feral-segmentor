@@ -1,8 +1,8 @@
 import pytest
 
-from feral_segmenter.data.dataset import SegmentationDataset
-from feral_segmenter.data.fetch import fetch_data
-from feral_segmenter.data.transforms import preprocess
+from feral_segmentor.data.dataset import SegmentationDataset
+from feral_segmentor.data.fetch import fetch_data
+from feral_segmentor.data.transforms import preprocess
 
 
 def test_fetch_data_not_implemented():

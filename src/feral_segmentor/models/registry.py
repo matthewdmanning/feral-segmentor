@@ -1,5 +1,5 @@
-from feral_segmenter.models.base import SegmentationModel
-from feral_segmenter.models.segmentation import UnspecifiedModel
+from feral_segmentor.models.base import SegmentationModel
+from feral_segmentor.models.segmentation import UnspecifiedModel
 
 _MODELS: dict[str, type[SegmentationModel]] = {
     "unspecified": UnspecifiedModel,

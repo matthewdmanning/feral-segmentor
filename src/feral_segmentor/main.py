@@ -2,8 +2,8 @@ import hydra
 import mlflow
 from omegaconf import DictConfig, OmegaConf
 
-from feral_segmenter.data.augmentations import FunctionAugmentation
-from feral_segmenter.pipeline import segment
+from feral_segmentor.data.augmentations import FunctionAugmentation
+from feral_segmentor.pipeline import segment
 
 
 @hydra.main(version_base=None, config_path="../../conf", config_name="config")

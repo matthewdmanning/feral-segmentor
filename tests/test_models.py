@@ -1,6 +1,6 @@
 import pytest
 
-from feral_segmenter.models.registry import get_model
+from feral_segmentor.models.registry import get_model
 
 
 def test_get_model_predict_not_implemented(tiny_image):

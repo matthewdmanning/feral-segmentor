@@ -5,5 +5,5 @@ defaults:
 name: student_script
 source: script
 # "module:function" -> callable(cfg) returning list[Path] of produced weights.
-entrypoint: feral_segmenter.models.example_export:export
+entrypoint: feral_segmentor.models.example_export:export
 weights_dir: models/checkpoints/student_script

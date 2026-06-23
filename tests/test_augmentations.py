@@ -1,6 +1,6 @@
 import pytest
 
-from feral_segmenter.data.augmentations import Augmentation, FunctionAugmentation
+from feral_segmentor.data.augmentations import Augmentation, FunctionAugmentation
 
 
 class AppendTag(Augmentation):

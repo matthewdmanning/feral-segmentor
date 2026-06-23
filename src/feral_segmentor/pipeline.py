@@ -1,9 +1,9 @@
 from typing import Any
 
-from feral_segmenter.data.fetch import fetch_data
-from feral_segmenter.data.transforms import preprocess
-from feral_segmenter.io_utils import load_image
-from feral_segmenter.models.registry import get_model
+from feral_segmentor.data.fetch import fetch_data
+from feral_segmentor.data.transforms import preprocess
+from feral_segmentor.io_utils import load_image
+from feral_segmentor.models.registry import get_model
 
 
 def segment(image_path: str, model_name: str = "unspecified") -> Any:

@@ -5,6 +5,10 @@ build/
 dist/
 wheels/
 *.egg-info
+outputs/
+coverage.json
+coverage.xml
+mlflow.db
 
 # Virtual environments
 .venv
@@ -22,4 +26,7 @@ mlflow.db
 !/models/**/.gitkeep
 .claude/**
 CLAUDE.md
-outputs/2026-06-22/11-53-58/hub_fetch.log
+
+bash.exe.stackdump
+.coverage
+coverage.xml

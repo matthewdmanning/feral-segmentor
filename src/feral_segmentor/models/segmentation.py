@@ -1,6 +1,6 @@
 from typing import Any
 
-from feral_segmenter.models.base import SegmentationModel
+from feral_segmentor.models.base import SegmentationModel
 
 
 class UnspecifiedModel(SegmentationModel):

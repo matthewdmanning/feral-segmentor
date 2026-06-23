@@ -1,12 +1,12 @@
 """Structured-config dataclasses.
 
-These are registered in :mod:`feral_segmenter.config.store` so that each YAML in
+These are registered in :mod:`feral_segmentor.config.store` so that each YAML in
 ``conf/`` merges *onto* a typed node (Hydra's schema-as-defaults pattern). The
 composed object stays a struct-mode ``DictConfig`` — fully mergeable and
 CLI-overridable — while gaining type checking and rejecting unknown keys.
 
 Required-at-runtime fields use ``omegaconf.MISSING``; everything else defaults to
-a constant from :mod:`feral_segmenter.constants` (no magic numbers).
+a constant from :mod:`feral_segmentor.constants` (no magic numbers).
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 
 from omegaconf import MISSING
 
-from feral_segmenter import constants as C
+from feral_segmentor import constants as C
 
 
 # --- Data -------------------------------------------------------------------

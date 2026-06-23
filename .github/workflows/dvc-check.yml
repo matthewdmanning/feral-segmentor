@@ -1,0 +1,46 @@
+name: DVC Health
+
+on:
+  push:
+    paths:
+      - "dvc.yaml"
+      - "dvc.lock"
+      - ".dvcignore"
+      - "**/*.dvc"
+      - ".github/workflows/dvc-check.yml"
+  pull_request:
+    paths:
+      - "dvc.yaml"
+      - "dvc.lock"
+      - ".dvcignore"
+      - "**/*.dvc"
+      - ".github/workflows/dvc-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dvc-health:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7.2.0
+        with:
+          python-version: "{{ cookiecutter.python_version }}"
+          enable-cache: true
+
+      - name: DVC doctor
+        run: |
+          uvx --from dvc --with dvc-s3 dvc doctor
+
+      - name: DVC pipeline graph (if dvc.yaml exists)
+        run: |
+          if [ -f "dvc.yaml" ]; then
+            uvx --from dvc --with dvc-s3 dvc dag
+          else
+            echo "No dvc.yaml found, skipping pipeline graph check."
+          fi

@@ -1,7 +1,7 @@
 import tempfile
 from pathlib import Path
 
-from feral_segmenter.io_utils import load_image, read_json, save_image, write_json
+from feral_segmentor.io_utils import load_image, read_json, save_image, write_json
 
 
 def test_read_write_json_roundtrip():

@@ -5,7 +5,7 @@ from hydra import compose, initialize
 from omegaconf import DictConfig, OmegaConf
 from omegaconf.errors import ConfigAttributeError, ConfigKeyError
 
-from feral_segmenter.config.store import register_configs
+from feral_segmentor.config.store import register_configs
 
 
 @pytest.fixture(autouse=True)

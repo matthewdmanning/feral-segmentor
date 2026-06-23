@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from hydra.core.config_store import ConfigStore
 
-from feral_segmenter.config.schema import (
+from feral_segmentor.config.schema import (
     AugmentationConfig,
     ConfigModelConfig,
     DataConfig,
