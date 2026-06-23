@@ -1,19 +1,24 @@
-import torch
+from __future__ import annotations
+
+from pathlib import Path
+
 import torch.nn as nn
+from ultralytics import YOLO
+
 
 class TeacherModel(nn.Module):
-    """
-    Placeholder wrapper for YOLOv11x-seg teacher.
-    Assumes external pretrained weights are loaded.
-    """
+    """YOLOv11x-seg teacher loaded via Ultralytics."""
 
-    def __init__(self):
+    def __init__(self, model_id: str = "yolo11x-seg.pt"):
         super().__init__()
-        self.model = None  # loaded externally
+        self.yolo = YOLO(model_id)
 
-    def load_weights(self, path: str):
-        self.model = torch.load(path, map_location="cpu")
+    @classmethod
+    def from_path(cls, path: str | Path) -> "TeacherModel":
+        obj = cls.__new__(cls)
+        super(TeacherModel, obj).__init__()
+        obj.yolo = YOLO(str(path))
+        return obj
 
     def forward(self, x):
-        assert self.model is not None, "Teacher not loaded"
-        return self.model(x)
+        return self.yolo(x)
