@@ -8,14 +8,12 @@ import torch
 import torch.nn as nn
 
 from feral_segmentor.constants import (
-    DEFAULT_BASE_CHANNELS,
     DEFAULT_IMAGE_SIZE,
     DEFAULT_IN_CHANNELS,
     DEFAULT_NUM_CLASSES,
 )
 from feral_segmentor.models.base import SegmentationOutput
 
-OXFORD_PET_DIR = Path(r"C:\GitHub\data\oxford_seg\oxford-iiit-pet")
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
@@ -23,9 +21,10 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 # Image fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def tiny_image():
-    path = OXFORD_PET_DIR / "images" / "Abyssinian_1.jpg"
+    path = FIXTURES_DIR / "oxford_samples" / "Abyssinian_1.jpg"
     return cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
 
 
@@ -39,6 +38,7 @@ def fixture_dataset_root():
 def fixture_dataset():
     """SegmentationDataset over the 8 committed fixture samples."""
     from feral_segmentor.data.dataset import SegmentationDataset
+
     return SegmentationDataset(str(FIXTURES_DIR))
 
 
@@ -46,12 +46,15 @@ def fixture_dataset():
 def synthetic_bgr_image():
     """Random uint8 BGR image — no disk dependency."""
     rng = np.random.default_rng(0)
-    return rng.integers(0, 256, (DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE, 3), dtype=np.uint8)
+    return rng.integers(
+        0, 256, (DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE, 3), dtype=np.uint8
+    )
 
 
 # ---------------------------------------------------------------------------
 # Tensor fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def image_tensor():
@@ -68,13 +71,17 @@ def batch_image_tensor():
 @pytest.fixture
 def mask_tensor():
     """Single HW int64 segmentation mask."""
-    return torch.randint(0, DEFAULT_NUM_CLASSES, (DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE))
+    return torch.randint(
+        0, DEFAULT_NUM_CLASSES, (DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    )
 
 
 @pytest.fixture
 def batch_mask_tensor():
     """BHW int64 batch of masks."""
-    return torch.randint(0, DEFAULT_NUM_CLASSES, (2, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE))
+    return torch.randint(
+        0, DEFAULT_NUM_CLASSES, (2, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    )
 
 
 @pytest.fixture
@@ -87,13 +94,16 @@ def logits_tensor():
 # DataLoader fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def tiny_dataloader():
     """In-memory DataLoader with 4 synthetic (image, mask) batches."""
     data = [
         (
             torch.rand(2, DEFAULT_IN_CHANNELS, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE),
-            torch.randint(0, DEFAULT_NUM_CLASSES, (2, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)),
+            torch.randint(
+                0, DEFAULT_NUM_CLASSES, (2, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+            ),
         )
         for _ in range(4)
     ]
@@ -103,6 +113,7 @@ def tiny_dataloader():
 # ---------------------------------------------------------------------------
 # Mock model fixtures
 # ---------------------------------------------------------------------------
+
 
 class _MinimalSegmenter(nn.Module):
     """Deterministic stand-in: returns zero logits of correct shape."""
@@ -147,6 +158,7 @@ def mock_teacher():
 # Optimizer / scheduler fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_optimizer(mock_model):
     return torch.optim.SGD(mock_model.parameters(), lr=1e-3)
@@ -161,10 +173,13 @@ def mock_scheduler(mock_optimizer):
 # SegmentationOutput fixture
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def dummy_output():
     return SegmentationOutput(
-        mask_logits=torch.randn(DEFAULT_NUM_CLASSES, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE),
+        mask_logits=torch.randn(
+            DEFAULT_NUM_CLASSES, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE
+        ),
         boxes=torch.tensor([[4.0, 4.0, 12.0, 12.0]]),
         scores=torch.tensor([0.9]),
         labels=torch.tensor([1], dtype=torch.long),

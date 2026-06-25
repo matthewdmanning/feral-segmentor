@@ -16,20 +16,21 @@ on:
       - "pyproject.toml"
       - ".github/workflows/docs-build.yml"
 
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   docs-build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6.0.1
+      - uses: actions/checkout@v4
 
       - name: Detect docs builder
         id: detect
-        shell: bash
         run: |
           if [ -f "mkdocs.yml" ] || [ -f "mkdocs.yaml" ]; then
             echo "builder=mkdocs" >> "$GITHUB_OUTPUT"
@@ -39,32 +40,30 @@ jobs:
             echo "builder=none" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Install uv
+      - uses: astral-sh/setup-uv@v5
         if: steps.detect.outputs.builder != 'none'
-        uses: astral-sh/setup-uv@v7.2.0
         with:
-          python-version: "{{ cookiecutter.python_version }}"
+          python-version: "3.12"
           enable-cache: true
 
-      - name: Sync dependencies (locked)
+      - name: Sync dependencies
         if: steps.detect.outputs.builder != 'none'
         run: |
-          if [ "{% raw %}${{ steps.detect.outputs.builder }}{% endraw %}" = "mkdocs" ]; then
+          if [ "${{ steps.detect.outputs.builder }}" = "mkdocs" ]; then
             uv sync --group dev --group docs-mkdocs
-          elif [ "{% raw %}${{ steps.detect.outputs.builder }}{% endraw %}" = "sphinx" ]; then
+          else
             uv sync --group dev --group docs-sphinx
           fi
 
-      - name: Build documentation
+      - name: Build docs
         if: steps.detect.outputs.builder != 'none'
         run: |
-          if [ "{% raw %}${{ steps.detect.outputs.builder }}{% endraw %}" = "mkdocs" ]; then
+          if [ "${{ steps.detect.outputs.builder }}" = "mkdocs" ]; then
             uv run mkdocs build --strict
-          elif [ "{% raw %}${{ steps.detect.outputs.builder }}{% endraw %}" = "sphinx" ]; then
+          else
             uv run sphinx-build -b html docs docs/_build -W
           fi
 
       - name: Package build check
         if: steps.detect.outputs.builder != 'none'
-        run: |
-          uv build
+        run: uv build
