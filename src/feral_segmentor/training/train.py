@@ -44,7 +44,9 @@ def _write_data_yaml(cfg: DictConfig, data_dir: str) -> Path:
         # Fallback: generic class names based on similarity list length.
         n = len(cfg.data.class_similarity) or cfg.model.num_classes
         names = [f"class{i}" for i in range(n)]
-        logger.warning("names.yaml not found at %s; using generic class names", names_path)
+        logger.warning(
+            "names.yaml not found at %s; using generic class names", names_path
+        )
 
     payload = {
         "path": str(data_dir),
