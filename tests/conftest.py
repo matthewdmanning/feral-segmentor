@@ -8,14 +8,12 @@ import torch
 import torch.nn as nn
 
 from feral_segmentor.constants import (
-    DEFAULT_BASE_CHANNELS,
     DEFAULT_IMAGE_SIZE,
     DEFAULT_IN_CHANNELS,
     DEFAULT_NUM_CLASSES,
 )
 from feral_segmentor.models.base import SegmentationOutput
 
-OXFORD_PET_DIR = Path(r"C:\GitHub\data\oxford_seg\oxford-iiit-pet")
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
@@ -25,7 +23,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 @pytest.fixture
 def tiny_image():
-    path = OXFORD_PET_DIR / "images" / "Abyssinian_1.jpg"
+    path = FIXTURES_DIR / "oxford_samples" / "Abyssinian_1.jpg"
     return cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
 
 

@@ -7,7 +7,7 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from feral_segmentor.constants import DEFAULT_IMAGE_SIZE, DEFAULT_NUM_CLASSES
+from feral_segmentor.constants import DEFAULT_IMAGE_SIZE
 from feral_segmentor.data.dataset import SegmentationDataset
 
 
