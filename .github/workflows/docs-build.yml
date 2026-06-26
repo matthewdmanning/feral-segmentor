@@ -49,18 +49,18 @@ jobs:
       - name: Sync dependencies (locked)
         if: steps.detect.outputs.builder != 'none'
         run: |
-          if [ "{% raw %}${{ steps.detect.outputs.builder }}{% endraw %}" = "mkdocs" ]; then
+          if [ "${{ steps.detect.outputs.builder }}" = "mkdocs" ]; then
             uv sync --group dev --group docs-mkdocs
-          elif [ "{% raw %}${{ steps.detect.outputs.builder }}{% endraw %}" = "sphinx" ]; then
+          elif [ "${{ steps.detect.outputs.builder }}" = "sphinx" ]; then
             uv sync --group dev --group docs-sphinx
           fi
 
       - name: Build documentation
         if: steps.detect.outputs.builder != 'none'
         run: |
-          if [ "{% raw %}${{ steps.detect.outputs.builder }}{% endraw %}" = "mkdocs" ]; then
+          if [ "${{ steps.detect.outputs.builder }}" = "mkdocs" ]; then
             uv run mkdocs build --strict
-          elif [ "{% raw %}${{ steps.detect.outputs.builder }}{% endraw %}" = "sphinx" ]; then
+          elif [ "${{ steps.detect.outputs.builder }}" = "sphinx" ]; then
             uv run sphinx-build -b html docs docs/_build -W
           fi
 
