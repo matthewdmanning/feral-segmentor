@@ -12,6 +12,7 @@ a constant from :mod:`feral_segmentor.constants` (no magic numbers).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from omegaconf import MISSING
 
@@ -110,9 +111,13 @@ class TrackingConfig:
 @dataclass
 class AugmentationConfig:
     name: str = MISSING
-    # Ordered list of registered augmentation op names; the chain builder maps
-    # each name to a concrete Augmentation (params sourced from constants).
-    ops: list[str] = field(default_factory=list)
+    # Each op is a dict with a required 'name' key (short Albumentations class
+    # name or fully-qualified path) plus any kwargs the transform accepts.
+    # Short names are resolved via getattr(albumentations, name); fully qualified
+    # names (containing a dot) are resolved via importlib. Per-op kwargs flow
+    # directly to the transform constructor, so any Albumentations transform is
+    # supported without a registry.
+    ops: list[Any] = field(default_factory=list)
 
 
 # --- Top-level (type-hint convenience; group schemas are what get registered) ---
