@@ -1,9 +1,13 @@
-import numpy as np
+from pathlib import Path
+
+import cv2
 import pytest
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
 def tiny_image():
-    """Synthetic 64x64 BGR image; no real files required."""
-    rng = np.random.default_rng(0)
-    return rng.integers(0, 256, (64, 64, 3), dtype=np.uint8)
+    """Real BGR image loaded from the committed test fixtures."""
+    path = FIXTURES_DIR / "american_bulldog_103_original.jpg"
+    return cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
