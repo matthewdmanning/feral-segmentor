@@ -985,6 +985,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "coverage" },
+    { name = "furo" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1015,6 +1016,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "coverage", specifier = ">=7.14.2" },
+    { name = "furo", specifier = ">=2025.12.19" },
     { name = "mypy", specifier = ">=1.10.0" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
