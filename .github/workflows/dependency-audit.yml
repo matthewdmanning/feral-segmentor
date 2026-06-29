@@ -18,4 +18,4 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --group dev
-      - run: uv run pip-audit
+      - run: uvx pip-audit
