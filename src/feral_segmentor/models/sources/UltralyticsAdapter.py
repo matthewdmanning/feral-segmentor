@@ -36,7 +36,9 @@ class UltralyticsAdapter(SourceAdapter):
         from ultralytics import YOLO
 
         log.info("loading ultralytics model %s", cfg.architecture.id)
-        return YOLO(cfg.architecture.id).model
+        model = YOLO(cfg.architecture.id).model
+        assert isinstance(model, nn.Module), f"expected nn.Module, got {type(model)}"
+        return model
 
     def inspect(
         self, cfg: DictConfig, *, fetch_if_needed: bool = False
@@ -59,7 +61,7 @@ class UltralyticsAdapter(SourceAdapter):
         nc = getattr(model.model, "nc", None)
 
         props = ModelProperties(
-            model_outputs=_TASK_TO_OUTPUTS.get(task, []),
+            model_outputs=_TASK_TO_OUTPUTS.get(task or "", []),
         )
         metadata = {
             "task": task,

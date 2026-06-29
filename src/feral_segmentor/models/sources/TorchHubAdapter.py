@@ -30,7 +30,7 @@ class TorchHubAdapter(SourceAdapter):
 
     def inspect(
         self, cfg: DictConfig, *, fetch_if_needed: bool = False
-    ) -> ModelProperties:
+    ) -> tuple[ModelProperties, dict]:
         from feral_segmentor.models.register_model import load_model_registry
 
         try:

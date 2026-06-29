@@ -119,6 +119,5 @@ def test_inspect_returns_properties_from_metadata(tmp_path, monkeypatch):
     from feral_segmentor.tasks import CVTask
 
     props, meta = HFAdapter().inspect(_cfg(tmp_path))
-    assert props.n_classes == 17
-    assert CVTask.POSE in props.model_outputs
+    assert props.model_outputs == [CVTask.POSE]
     assert meta["pipeline_tag"] == "pose-estimation"

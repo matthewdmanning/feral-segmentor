@@ -46,7 +46,7 @@ class HFAdapter(SourceAdapter):
 
     def inspect(
         self, cfg: DictConfig, *, fetch_if_needed: bool = False
-    ) -> ModelProperties:
+    ) -> tuple[ModelProperties, dict]:
         from feral_segmentor.models.register_model import load_model_registry
 
         try:
@@ -60,7 +60,7 @@ class HFAdapter(SourceAdapter):
             model_cfg = getattr(info, "config", None) or {}
             props = ModelProperties(
                 n_classes=model_cfg.get("num_labels") or model_cfg.get("num_classes"),
-                model_outputs=_TAG_TO_OUTPUTS.get(tag, []),
+                model_outputs=_TAG_TO_OUTPUTS.get(tag or "", []),
             )
             metadata = {
                 "pipeline_tag": tag,

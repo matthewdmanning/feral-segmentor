@@ -28,7 +28,7 @@ _PIPELINE_TAG_TASKS: dict[str, list[CVTask]] = {
 
 def _tasks_from_info(info) -> list[CVTask]:
     tag = getattr(info, "pipeline_tag", None)
-    return _PIPELINE_TAG_TASKS.get(tag, [])
+    return _PIPELINE_TAG_TASKS.get(tag or "", [])
 
 
 def _n_classes_from_info(info) -> int | None:

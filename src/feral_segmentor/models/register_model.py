@@ -52,6 +52,8 @@ def _get_adapter(source: str):
     sources_dir = Path(__file__).parent / "sources"
     for f in sorted(sources_dir.glob("*Adapter.py")):
         spec = importlib.util.spec_from_file_location(f.stem, f)
+        if spec is None or spec.loader is None:
+            continue
         mod = importlib.util.module_from_spec(spec)
         try:
             spec.loader.exec_module(mod)
