@@ -1,7 +1,7 @@
 {
     "MD013": false,
     "MD060": {
-        "style": "compact"
+        "style": "any"
     },
     "code-fence-style": {
         "style": "tilde"
