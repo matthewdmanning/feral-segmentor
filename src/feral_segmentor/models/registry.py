@@ -7,6 +7,8 @@ from typing import Any, Callable, TypeVar
 from omegaconf import DictConfig
 from torch import nn
 
+from feral_segmentor.tasks import CVTask
+
 DEFAULT_ARCH: str = "net"
 
 # Values are Any so registered classes may define from_config without mypy
@@ -47,3 +49,8 @@ def get_model(name: str = DEFAULT_ARCH) -> nn.Module:
             f"unknown architecture {name!r}; registered: {sorted(_ARCHITECTURES)}"
         ) from None
     return cls()
+
+
+def get_model_tasks(model_cfg: DictConfig) -> list[CVTask]:
+    """Return the CVTask list declared in a composed model config."""
+    return [CVTask(t) for t in model_cfg.model_tasks]

@@ -1,2 +1,12 @@
-name: net
-arch: net
+defaults:
+  - base_model
+  - _self_
+
+model_outputs: []
+
+architecture:
+  source: ???
+  id: ???
+  location: ???
+
+weights: null

@@ -1,4 +1,4 @@
-"""Tests for the weight-source adapter registry."""
+"""Tests for HFAdapter fetch/inspect and the register_model registry workflow."""
 
 from __future__ import annotations
 
@@ -6,69 +6,119 @@ from pathlib import Path
 
 import pytest
 import torch
+import torch.nn as nn
 from omegaconf import OmegaConf
 
-import feral_segmentor.models  # noqa: F401 — triggers source registration
-from feral_segmentor.models.source import (
-    WeightSource,
-    _SOURCES,
-    load_model,
-    register_source,
-)
-from feral_segmentor.models.sources.hub import HubSource
+from feral_segmentor.models.sources.HFAdapter import HFAdapter
 
 
-def test_hub_registered():
-    assert "hub" in _SOURCES
-    assert _SOURCES["hub"] is HubSource
+def _cfg(tmp_path, filenames=("weights.pt",), location="weights"):
+    return OmegaConf.create(
+        {
+            "architecture": {"source": "hf_hub", "id": "org/repo", "location": None},
+            "weights": {
+                "source": "hf_hub",
+                "id": list(filenames),
+                "location": str(tmp_path / location) if location else None,
+            },
+        }
+    )
 
 
-def test_register_source_decorator():
-    @register_source("_test_dummy_source")
-    class _DummySource:
-        def load(self, cfg):
-            return None
-
-    assert "_test_dummy_source" in _SOURCES
-    assert _SOURCES["_test_dummy_source"] is _DummySource
-    # Cleanup so other tests see a clean registry.
-    del _SOURCES["_test_dummy_source"]
+def _cfg_no_weights(tmp_path):
+    return OmegaConf.create(
+        {
+            "architecture": {"source": "hf_hub", "id": "org/repo", "location": None},
+            "weights": None,
+        }
+    )
 
 
-def test_load_model_unknown_raises():
-    with pytest.raises(KeyError, match="unknown source"):
-        load_model(OmegaConf.create({"source": "bogus"}))
+# --- fetch -------------------------------------------------------------------
 
 
-def test_hub_source_satisfies_protocol():
-    """HubSource instances are structurally compatible with WeightSource."""
-    src: WeightSource = HubSource()
-    assert callable(src.load)
-
-
-def test_hub_source_fetches_and_loads(tmp_path, monkeypatch):
-    calls: list[tuple] = []
+def test_fetch_downloads_missing_files(tmp_path, monkeypatch):
+    calls = []
 
     def fake_download(repo_id, filename, local_dir):
         calls.append((repo_id, filename, local_dir))
-        path = Path(local_dir) / filename
-        path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save({}, str(path))
-        return str(path)
+        p = Path(local_dir) / filename
+        p.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(nn.Linear(4, 2), str(p))
 
     monkeypatch.setattr(
-        "feral_segmentor.models.sources.hub.hf_hub_download", fake_download
+        "feral_segmentor.models.sources.HFAdapter.hf_hub_download", fake_download
     )
-
-    cfg = OmegaConf.create(
-        {
-            "source": "hub",
-            "repo_id": "org/repo",
-            "files": ["weights.pt"],
-            "weights_dir": str(tmp_path / "weights"),
-            "arch": "net",
-        }
+    monkeypatch.setattr(
+        "feral_segmentor.models.sources.HFAdapter._load_local",
+        lambda dest, filenames: nn.Linear(4, 2),
     )
-    model = load_model(cfg)
-    assert model is not None
+    HFAdapter().fetch(_cfg(tmp_path))
     assert calls == [("org/repo", "weights.pt", tmp_path / "weights")]
+
+
+def test_fetch_skips_existing_files(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "feral_segmentor.models.sources.HFAdapter.hf_hub_download",
+        lambda **kw: calls.append(kw),
+    )
+    weights_dir = tmp_path / "weights"
+    weights_dir.mkdir()
+    (weights_dir / "weights.pt").touch()
+
+    monkeypatch.setattr(
+        "feral_segmentor.models.sources.HFAdapter._load_local",
+        lambda dest, filenames: nn.Linear(4, 2),
+    )
+    HFAdapter().fetch(_cfg(tmp_path))
+    assert calls == []
+
+
+def test_fetch_returns_module(tmp_path):
+    model = nn.Linear(4, 2)
+    weights_dir = tmp_path / "weights"
+    weights_dir.mkdir()
+    torch.save(model, str(weights_dir / "weights.pt"))
+
+    result = HFAdapter().fetch(_cfg(tmp_path))
+    assert isinstance(result, nn.Module)
+
+
+def test_fetch_null_location_loads_direct(tmp_path, monkeypatch):
+    loaded = nn.Linear(4, 2)
+    monkeypatch.setattr(
+        "feral_segmentor.models.sources.HFAdapter._load_direct",
+        lambda repo_id: loaded,
+    )
+    result = HFAdapter().fetch(_cfg_no_weights(tmp_path))
+    assert result is loaded
+
+
+# --- inspect -----------------------------------------------------------------
+
+
+def test_inspect_raises_on_hub_failure_by_default(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "feral_segmentor.models.sources.HFAdapter.model_info",
+        lambda repo_id: (_ for _ in ()).throw(Exception("unreachable")),
+    )
+    with pytest.raises(RuntimeError, match="fetch_if_needed"):
+        HFAdapter().inspect(_cfg(tmp_path))
+
+
+def test_inspect_returns_properties_from_metadata(tmp_path, monkeypatch):
+    class FakeInfo:
+        pipeline_tag = "pose-estimation"
+        config = {"num_labels": 17}
+
+    monkeypatch.setattr(
+        "feral_segmentor.models.sources.HFAdapter.model_info",
+        lambda repo_id: FakeInfo(),
+    )
+    from feral_segmentor.tasks import CVTask
+
+    props, meta = HFAdapter().inspect(_cfg(tmp_path))
+    assert props.n_classes == 17
+    assert CVTask.POSE in props.model_outputs
+    assert meta["pipeline_tag"] == "pose-estimation"

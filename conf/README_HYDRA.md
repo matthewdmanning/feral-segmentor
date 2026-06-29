@@ -47,27 +47,6 @@ Typical groups in this template:
 - **`mlflow/`**  
   MLflow tracking configuration (tracking URI, experiment naming policy, tags).
 
-- **`experiment/`** *(optional)*  
-  Named presets that override multiple groups at once (e.g. `baseline`, `debug`).
-
----
-
-## Common usage examples
-
-```bash
-# Default run (uses defaults from config.yaml)
-python -m src.feral-segmentor.core.train
-
-# Select specific variants
-python -m src.feral-segmentor.core.train model=conv_autoencoder data=base trainer=base
-
-# Override individual parameters
-python -m src.feral-segmentor.core.train trainer.max_epochs=20 model.lr=1e-4
-
-# Use a named experiment preset (if defined)
-python -m src.feral-segmentor.core.train experiment=baseline
-```
-
 ---
 
 ## Template checklist for a new project

@@ -12,7 +12,7 @@ a constant from :mod:`feral_segmentor.constants` (no magic numbers).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Optional
 
 from omegaconf import MISSING
 
@@ -31,31 +31,32 @@ class DataConfig:
     class_similarity: list[float] = field(default_factory=list)
 
 
-# --- Model: architecture (shared) + acquisition source (discriminated) ------
+# --- Model ------------------------------------------------------------------
+@dataclass
+class SourceConfig:
+    """Where a model architecture or weights come from. Resolved by source adapter."""
+
+    source: str = MISSING  # discriminator: hf_hub | yolo_hub | local | url | ...
+    id: str = MISSING  # hub repo ID, model name, dotted class path, or URL
+    location: Optional[str] = None  # local path; None = hub loads directly into memory
+
+
+@dataclass
+class WeightsConfig:
+    """Weight files to fetch and load. Independent of architecture source."""
+
+    source: str = MISSING
+    id: list[str] = field(default_factory=list)  # filenames, hub asset names, etc.
+    location: Optional[str] = None  # local path; None = hub loads directly into memory
+
+
 @dataclass
 class ModelConfig:
-    """Base/interface for the model group.
+    """Single source of truth for a model. architecture is required; weights is optional."""
 
-    Architecture fields are shared by every variant (a model has an
-    architecture regardless of how its weights are obtained). ``source`` is the
-    discriminator consumed by the acquisition factory.
-    """
-
-    name: str = MISSING
-    source: str = MISSING
-    in_channels: int = C.DEFAULT_IN_CHANNELS
-    base_channels: int = C.DEFAULT_BASE_CHANNELS
-    num_classes: int = C.DEFAULT_NUM_CLASSES
-
-
-@dataclass
-class HubModelConfig(ModelConfig):
-    """Weights fetched from the Hugging Face Hub."""
-
-    source: str = "hub"
-    repo_id: str = MISSING
-    files: list[str] = field(default_factory=list)
-    weights_dir: str = MISSING
+    model_outputs: list[str] = field(default_factory=list)
+    architecture: SourceConfig = MISSING
+    weights: Optional[WeightsConfig] = None
 
 
 # --- Training ---------------------------------------------------------------

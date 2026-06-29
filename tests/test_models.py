@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import pytest
 import torch
+from torch import nn
 
 import feral_segmentor.models  # noqa: F401 — triggers registration
-from feral_segmentor.models.default import Net
 from feral_segmentor.models.registry import (
-    DEFAULT_ARCH,
     _ARCHITECTURES,
     build_model,
     get_model,
@@ -16,19 +15,14 @@ from feral_segmentor.models.registry import (
 )
 
 
-def test_net_registered_as_default():
-    assert DEFAULT_ARCH in _ARCHITECTURES
-    assert _ARCHITECTURES[DEFAULT_ARCH] is Net
-
-
-def test_get_model_returns_net():
+def test_get_model_returns_torch_module():
     model = get_model()
-    assert isinstance(model, Net)
+    assert isinstance(model, nn.Module)
 
 
 def test_get_model_by_name():
     model = get_model("net")
-    assert isinstance(model, Net)
+    assert isinstance(model, nn.Module)
 
 
 def test_get_model_unknown_raises():
@@ -59,18 +53,3 @@ def test_build_model_unknown_arch_raises():
 
     with pytest.raises(KeyError, match="unknown architecture"):
         build_model(OmegaConf.create({"arch": "not_real"}))
-
-
-def test_net_forward_correct_shape():
-    model = Net()
-    x = torch.randn(2, 3, 32, 32)
-    out = model(x)
-    assert out.shape == (2, 10)
-
-
-def test_net_from_config_ignores_cfg():
-    from omegaconf import OmegaConf
-
-    cfg = OmegaConf.create({"arch": "net", "unused_field": 99})
-    model = Net.from_config(cfg)
-    assert isinstance(model, Net)

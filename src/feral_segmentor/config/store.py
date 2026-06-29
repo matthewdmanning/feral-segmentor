@@ -13,8 +13,8 @@ from hydra.core.config_store import ConfigStore
 from feral_segmentor.config.schema import (
     AugmentationConfig,
     DataConfig,
-    HubModelConfig,
     InferenceConfig,
+    ModelConfig,
     TrackingConfig,
     TrainConfig,
 )
@@ -23,7 +23,7 @@ from feral_segmentor.config.schema import (
 # `defaults:` list, resolved relative to the group.
 _SCHEMAS: tuple[tuple[str, str, type], ...] = (
     ("data", "base_data", DataConfig),
-    ("model", "base_hub", HubModelConfig),
+    ("model", "base_model", ModelConfig),
     ("train", "base_train", TrainConfig),
     ("inference", "base_inference", InferenceConfig),
     ("tracking", "base_tracking", TrackingConfig),

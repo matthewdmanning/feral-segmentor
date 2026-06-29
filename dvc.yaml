@@ -4,19 +4,19 @@ stages:
     outs:
       - data/raw
 
-  augment:
-    cmd: uv run python -m feral_segmentor.data.augmentations
-    deps:
-      - data/raw
-    outs:
-      - data/augmented
-
   preprocess:
     cmd: uv run python -m feral_segmentor.data.transforms
     deps:
       - data/raw
     outs:
       - data/processed
+
+  augment:
+    cmd: uv run python -m feral_segmentor.data.augmentations
+    deps:
+      - data/processed
+    outs:
+      - data/augmented
 
   train:
     cmd: uv run python -m feral_segmentor.pipelines.base_segmentation_pipeline
@@ -32,3 +32,4 @@ stages:
       - models/registry/best.pt
     metrics:
       - metrics.json
+
