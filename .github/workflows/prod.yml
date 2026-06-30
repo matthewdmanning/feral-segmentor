@@ -59,7 +59,7 @@ jobs:
     name: Version bump and release
     runs-on: ubuntu-latest
     needs: [quality, build]
-    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    if: false  # TODO: re-enable when ready to auto-release on merge to main
     permissions:
       contents: write
     steps:
