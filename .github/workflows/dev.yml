@@ -1,0 +1,84 @@
+name: Dev
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: dev-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uvx ruff check . --output-format=github
+      - run: uvx ruff format --check .
+
+  type-check:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --group dev
+      - run: uv run mypy src
+
+  tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --group dev
+      - run: uv run python -m pytest -m "not gpu and not slow" -q --tb=short
+
+  docs-check:
+    name: Docs build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect builder
+        id: detect
+        run: |
+          if [ -f "mkdocs.yml" ] || [ -f "mkdocs.yaml" ]; then
+            echo "builder=mkdocs" >> "$GITHUB_OUTPUT"
+          elif [ -f "docs/conf.py" ]; then
+            echo "builder=sphinx" >> "$GITHUB_OUTPUT"
+          else
+            echo "builder=none" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: astral-sh/setup-uv@v5
+        if: steps.detect.outputs.builder != 'none'
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install deps
+        if: steps.detect.outputs.builder != 'none'
+        run: |
+          if [ "${{ steps.detect.outputs.builder }}" = "sphinx" ]; then
+            uv sync --group dev --group docs-sphinx
+          else
+            uv sync --group dev
+          fi
+      - name: Build sphinx docs
+        if: steps.detect.outputs.builder == 'sphinx'
+        run: uv run sphinx-build -b html docs docs/_build -W
+      - name: Build mkdocs
+        if: steps.detect.outputs.builder == 'mkdocs'
+        run: uv run mkdocs build --strict
