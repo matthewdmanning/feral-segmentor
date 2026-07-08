@@ -15,16 +15,14 @@ from dataclasses import dataclass, field
 
 from omegaconf import MISSING
 
-from feral_segmentor import constants as C
-
 
 # --- Data -------------------------------------------------------------------
 @dataclass
 class DataConfig:
-    source: str = C.DEFAULT_DATA_SOURCE
+    source: str = "local"
     root: str = "data"
-    image_size: int = C.DEFAULT_IMAGE_SIZE
-    val_split: float = C.DEFAULT_VAL_SPLIT
+    image_size: int = 256
+    val_split: float = 0.2
     # Per-class morphological similarity to the target species (cat=1.0 anchor).
     # Length must match num_classes in the dataset. Empty list = uniform weights.
     class_similarity: list[float] = field(default_factory=list)
@@ -42,9 +40,9 @@ class ModelConfig:
 
     name: str = MISSING
     source: str = MISSING
-    in_channels: int = C.DEFAULT_IN_CHANNELS
-    base_channels: int = C.DEFAULT_BASE_CHANNELS
-    num_classes: int = C.DEFAULT_NUM_CLASSES
+    in_channels: int = 3
+    base_channels: int = 16
+    num_classes: int = 2
 
 
 @dataclass
@@ -163,7 +161,7 @@ class RAdamConfig(OptimConfig):
 @dataclass
 class CosineAnnealingConfig(SchedulerConfig):
     _target_: str = "torch.optim.lr_scheduler.CosineAnnealingLR"
-    T_max: int = C.DEFAULT_EPOCHS
+    T_max: int = 50
     eta_min: float = 0.0
     last_epoch: int = -1
 
@@ -244,10 +242,10 @@ class NLLLossConfig(LossFnConfig):
 # --- Training ---------------------------------------------------------------
 @dataclass
 class TrainConfig:
-    epochs: int = C.DEFAULT_EPOCHS
-    batch_size: int = C.DEFAULT_BATCH_SIZE
-    num_workers: int = C.DEFAULT_NUM_WORKERS
-    device: str = C.DEFAULT_DEVICE
+    epochs: int = 50
+    batch_size: int = 32
+    num_workers: int = 0
+    device: str = "cuda"
     optim: OptimConfig = MISSING
     loss_fn: LossFnConfig = MISSING
     scheduler: SchedulerConfig = MISSING
@@ -256,10 +254,10 @@ class TrainConfig:
 # --- Inference --------------------------------------------------------------
 @dataclass
 class InferenceConfig:
-    threshold: float = C.DEFAULT_MASK_THRESHOLD
-    device: str = C.DEFAULT_DEVICE
-    tta: bool = C.DEFAULT_TTA
-    min_box_area: int = C.DEFAULT_MIN_BOX_AREA
+    threshold: float = 0.5
+    device: str = "cpu"
+    tta: bool = False
+    min_box_area: int = 1
 
 
 # --- Experiment tracking ----------------------------------------------------

@@ -21,7 +21,6 @@ from feral_segmentor.constants import (
     COCO_ANNOTATIONS_URL,
     COCO_IMAGE_URL_TEMPLATE,
     COCO_SUPERCATEGORY_FILTER,
-    DEFAULT_DATA_SOURCE,
 )
 from feral_segmentor.utils import get_logger
 
@@ -131,7 +130,7 @@ def fetch_coco(root: str = "data") -> tuple[Path, Path]:
     return images_dir, ann_out
 
 
-def fetch_data(source: str = DEFAULT_DATA_SOURCE) -> Path:
+def fetch_data(source: str = "local") -> Path:
     """Resolve a data location and return its :class:`~pathlib.Path`.
 
     Parameters

@@ -6,7 +6,6 @@ import hydra
 import numpy as np
 from omegaconf import DictConfig
 
-from feral_segmentor import constants as C
 from feral_segmentor.config.store import register_configs
 from feral_segmentor.utils import get_logger
 
@@ -86,9 +85,7 @@ class HorizontalFlip(Augmentation):
 class RandomRotate90(Augmentation):
     """Rotate by a fixed multiple of 90 degrees (deterministic given ``k``)."""
 
-    def __init__(
-        self, inner: "Augmentation | None" = None, k: int = C.DEFAULT_ROTATE90_K
-    ):
+    def __init__(self, inner: "Augmentation | None" = None, k: int = 1):
         super().__init__(inner)
         self.k = k
 
@@ -105,7 +102,7 @@ class BrightnessShift(Augmentation):
     def __init__(
         self,
         inner: "Augmentation | None" = None,
-        shift: float = C.DEFAULT_BRIGHTNESS_SHIFT,
+        shift: float = 0.1,
     ):
         super().__init__(inner)
         self.shift = shift
@@ -120,9 +117,7 @@ class BrightnessShift(Augmentation):
 class GammaAdjust(Augmentation):
     """Apply gamma correction ``out = in ** gamma`` on [0, 1] images."""
 
-    def __init__(
-        self, inner: "Augmentation | None" = None, gamma: float = C.DEFAULT_GAMMA
-    ):
+    def __init__(self, inner: "Augmentation | None" = None, gamma: float = 1.2):
         super().__init__(inner)
         self.gamma = gamma
 
@@ -140,7 +135,7 @@ class MotionBlur(Augmentation):
     def __init__(
         self,
         inner: "Augmentation | None" = None,
-        kernel_size: int = C.DEFAULT_MOTION_BLUR_KERNEL,
+        kernel_size: int = 15,
     ):
         super().__init__(inner)
         if kernel_size % 2 == 0:

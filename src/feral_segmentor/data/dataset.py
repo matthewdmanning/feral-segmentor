@@ -9,7 +9,6 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from feral_segmentor.constants import DEFAULT_IMAGE_SIZE
 from feral_segmentor.data.transforms import preprocess
 
 # Subdirectories expected under the dataset root.
@@ -27,7 +26,7 @@ class SegmentationDataset(Dataset):
     tensors.
     """
 
-    def __init__(self, root: str, image_size: int = DEFAULT_IMAGE_SIZE) -> None:
+    def __init__(self, root: str, image_size: int = 256) -> None:
         self.root = Path(root)
         self.image_size = image_size
         self.images_dir = self.root / _IMAGES_DIR

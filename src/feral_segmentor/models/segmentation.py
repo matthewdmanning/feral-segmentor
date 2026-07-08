@@ -13,13 +13,6 @@ import torch.nn.functional as F
 from omegaconf import DictConfig
 from torch import nn
 
-from feral_segmentor.constants import (
-    DEFAULT_BASE_CHANNELS,
-    DEFAULT_IN_CHANNELS,
-    DEFAULT_MASK_THRESHOLD,
-    DEFAULT_MIN_BOX_AREA,
-    DEFAULT_NUM_CLASSES,
-)
 from feral_segmentor.inference.postprocess import masks_to_boxes
 from feral_segmentor.models.base import SegmentationModel, SegmentationOutput
 
@@ -44,9 +37,9 @@ class StudentSegmenter(nn.Module, SegmentationModel):
 
     def __init__(
         self,
-        in_channels: int = DEFAULT_IN_CHANNELS,
-        base_channels: int = DEFAULT_BASE_CHANNELS,
-        num_classes: int = DEFAULT_NUM_CLASSES,
+        in_channels: int = 3,
+        base_channels: int = 16,
+        num_classes: int = 2,
     ) -> None:
         super().__init__()
         self.in_channels = in_channels
@@ -99,9 +92,9 @@ class StudentSegmenter(nn.Module, SegmentationModel):
 
             # Foreground probability = 1 - P(background).
             fg_prob = 1.0 - probs[BACKGROUND_CLASS]  # (H, W)
-            fg_mask = fg_prob >= DEFAULT_MASK_THRESHOLD
+            fg_mask = fg_prob >= 0.5
 
-            boxes = masks_to_boxes(fg_mask, min_box_area=DEFAULT_MIN_BOX_AREA)
+            boxes = masks_to_boxes(fg_mask, min_box_area=1)
 
             scores_list: list[float] = []
             labels_list: list[int] = []

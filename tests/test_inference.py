@@ -1,11 +1,6 @@
 import torch
 from omegaconf import OmegaConf
 
-from feral_segmentor.constants import (
-    DEFAULT_BASE_CHANNELS,
-    DEFAULT_IN_CHANNELS,
-    DEFAULT_NUM_CLASSES,
-)
 from feral_segmentor.inference.postprocess import clean_mask, masks_to_boxes
 from feral_segmentor.inference.predictor import Predictor
 from feral_segmentor.models.base import SegmentationOutput
@@ -46,9 +41,9 @@ def test_clean_mask_runs():
 
 def _model():
     return StudentSegmenter(
-        in_channels=DEFAULT_IN_CHANNELS,
-        base_channels=DEFAULT_BASE_CHANNELS,
-        num_classes=DEFAULT_NUM_CLASSES,
+        in_channels=3,
+        base_channels=16,
+        num_classes=2,
     )
 
 
@@ -68,16 +63,16 @@ def _cfg(tta=False):
 def test_predictor_returns_segmentation_output():
     model = _model()
     predictor = Predictor(model, _cfg())
-    image = torch.rand(DEFAULT_IN_CHANNELS, 48, 48)
+    image = torch.rand(3, 48, 48)
     out = predictor.predict(image)
     assert isinstance(out, SegmentationOutput)
-    assert out.mask_logits.shape == (DEFAULT_NUM_CLASSES, 48, 48)
+    assert out.mask_logits.shape == (2, 48, 48)
     assert out.boxes.shape[-1] == 4
 
 
 def test_predictor_tta_runs():
     model = _model()
     predictor = Predictor(model, _cfg(tta=True))
-    image = torch.rand(DEFAULT_IN_CHANNELS, 48, 48)
+    image = torch.rand(3, 48, 48)
     out = predictor.predict(image)
     assert isinstance(out, SegmentationOutput)

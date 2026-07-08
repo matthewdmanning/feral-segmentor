@@ -6,13 +6,12 @@ import cv2
 import numpy as np
 import torch
 
-from feral_segmentor.constants import DEFAULT_IMAGE_SIZE
 
 # uint8 images span [0, 255]; divide by this to scale into [0, 1].
 _UINT8_MAX: float = 255.0
 
 
-def preprocess(image: np.ndarray, size: int = DEFAULT_IMAGE_SIZE) -> torch.Tensor:
+def preprocess(image: np.ndarray, size: int = 256) -> torch.Tensor:
     """Convert a cv2-loaded image into a model-ready tensor.
 
     Steps: convert BGR(A)/grayscale to 3-channel RGB, resize to

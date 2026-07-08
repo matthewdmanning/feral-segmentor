@@ -7,11 +7,6 @@ import pytest
 import torch
 import torch.nn as nn
 
-from feral_segmentor.constants import (
-    DEFAULT_IMAGE_SIZE,
-    DEFAULT_IN_CHANNELS,
-    DEFAULT_NUM_CLASSES,
-)
 from feral_segmentor.models.base import SegmentationOutput
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -46,9 +41,7 @@ def fixture_dataset():
 def synthetic_bgr_image():
     """Random uint8 BGR image — no disk dependency."""
     rng = np.random.default_rng(0)
-    return rng.integers(
-        0, 256, (DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE, 3), dtype=np.uint8
-    )
+    return rng.integers(0, 256, (256, 256, 3), dtype=np.uint8)
 
 
 # ---------------------------------------------------------------------------
@@ -59,35 +52,31 @@ def synthetic_bgr_image():
 @pytest.fixture
 def image_tensor():
     """Single CHW float32 image tensor."""
-    return torch.rand(DEFAULT_IN_CHANNELS, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    return torch.rand(3, 256, 256)
 
 
 @pytest.fixture
 def batch_image_tensor():
     """BCHW float32 batch."""
-    return torch.rand(2, DEFAULT_IN_CHANNELS, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    return torch.rand(2, 3, 256, 256)
 
 
 @pytest.fixture
 def mask_tensor():
     """Single HW int64 segmentation mask."""
-    return torch.randint(
-        0, DEFAULT_NUM_CLASSES, (DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
-    )
+    return torch.randint(0, 2, (256, 256))
 
 
 @pytest.fixture
 def batch_mask_tensor():
     """BHW int64 batch of masks."""
-    return torch.randint(
-        0, DEFAULT_NUM_CLASSES, (2, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
-    )
+    return torch.randint(0, 2, (2, 256, 256))
 
 
 @pytest.fixture
 def logits_tensor():
     """BCHW float32 logits matching batch/class/spatial defaults."""
-    return torch.randn(2, DEFAULT_NUM_CLASSES, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    return torch.randn(2, 2, 256, 256)
 
 
 # ---------------------------------------------------------------------------
@@ -100,10 +89,8 @@ def tiny_dataloader():
     """In-memory DataLoader with 4 synthetic (image, mask) batches."""
     data = [
         (
-            torch.rand(2, DEFAULT_IN_CHANNELS, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE),
-            torch.randint(
-                0, DEFAULT_NUM_CLASSES, (2, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
-            ),
+            torch.rand(2, 3, 256, 256),
+            torch.randint(0, 2, (2, 256, 256)),
         )
         for _ in range(4)
     ]
@@ -118,7 +105,7 @@ def tiny_dataloader():
 class _MinimalSegmenter(nn.Module):
     """Deterministic stand-in: returns zero logits of correct shape."""
 
-    def __init__(self, num_classes: int = DEFAULT_NUM_CLASSES):
+    def __init__(self, num_classes: int = 2):
         super().__init__()
         self.num_classes = num_classes
         # one parameter so optimizers have something to update
@@ -148,9 +135,7 @@ def mock_model():
 def mock_teacher():
     """MagicMock replacing TeacherModel — no YOLO download."""
     teacher = MagicMock(spec=nn.Module)
-    teacher.return_value = torch.zeros(
-        2, DEFAULT_NUM_CLASSES, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE
-    )
+    teacher.return_value = torch.zeros(2, 2, 256, 256)
     return teacher
 
 
@@ -177,9 +162,7 @@ def mock_scheduler(mock_optimizer):
 @pytest.fixture
 def dummy_output():
     return SegmentationOutput(
-        mask_logits=torch.randn(
-            DEFAULT_NUM_CLASSES, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE
-        ),
+        mask_logits=torch.randn(2, 256, 256),
         boxes=torch.tensor([[4.0, 4.0, 12.0, 12.0]]),
         scores=torch.tensor([0.9]),
         labels=torch.tensor([1], dtype=torch.long),

@@ -4,11 +4,6 @@ import pytest
 import torch
 from omegaconf import OmegaConf
 
-from feral_segmentor.constants import (
-    DEFAULT_BASE_CHANNELS,
-    DEFAULT_IN_CHANNELS,
-    DEFAULT_NUM_CLASSES,
-)
 from feral_segmentor.models.source import (
     ConfigModelSource,
     HubModelSource,
@@ -19,9 +14,9 @@ from feral_segmentor.models.source import (
 
 def _arch_fields():
     return {
-        "in_channels": DEFAULT_IN_CHANNELS,
-        "base_channels": DEFAULT_BASE_CHANNELS,
-        "num_classes": DEFAULT_NUM_CLASSES,
+        "in_channels": 3,
+        "base_channels": 16,
+        "num_classes": 2,
     }
 
 

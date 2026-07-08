@@ -7,7 +7,6 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from feral_segmentor.constants import DEFAULT_IMAGE_SIZE
 from feral_segmentor.data.dataset import SegmentationDataset
 
 
@@ -22,7 +21,7 @@ def test_fixture_dataset_length(fixture_dataset):
 
 def test_fixture_dataset_image_shape(fixture_dataset):
     img, _ = fixture_dataset[0]
-    assert img.shape == (3, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    assert img.shape == (3, 256, 256)
 
 
 def test_fixture_dataset_image_dtype(fixture_dataset):
@@ -38,7 +37,7 @@ def test_fixture_dataset_image_range(fixture_dataset):
 
 def test_fixture_dataset_mask_shape(fixture_dataset):
     _, mask = fixture_dataset[0]
-    assert mask.shape == (DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    assert mask.shape == (256, 256)
 
 
 def test_fixture_dataset_mask_dtype(fixture_dataset):
@@ -64,8 +63,8 @@ def test_fixture_dataset_mask_binary(fixture_dataset):
 def test_fixture_dataset_all_samples_load(fixture_dataset):
     for i in range(len(fixture_dataset)):
         img, mask = fixture_dataset[i]
-        assert img.shape == (3, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
-        assert mask.shape == (DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+        assert img.shape == (3, 256, 256)
+        assert mask.shape == (256, 256)
 
 
 # ---------------------------------------------------------------------------
@@ -76,8 +75,8 @@ def test_fixture_dataset_all_samples_load(fixture_dataset):
 def test_fixture_dataset_dataloader_batch(fixture_dataset):
     loader = DataLoader(fixture_dataset, batch_size=4, shuffle=False)
     imgs, masks = next(iter(loader))
-    assert imgs.shape == (4, 3, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
-    assert masks.shape == (4, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    assert imgs.shape == (4, 3, 256, 256)
+    assert masks.shape == (4, 256, 256)
 
 
 def test_fixture_dataset_dataloader_full_pass(fixture_dataset):

@@ -10,7 +10,6 @@ from __future__ import annotations
 import torch
 from omegaconf import DictConfig
 
-from feral_segmentor.constants import DEFAULT_MASK_THRESHOLD, DEFAULT_MIN_BOX_AREA
 from feral_segmentor.models.base import SegmentationModel, SegmentationOutput
 
 
@@ -43,16 +42,8 @@ class Predictor:
                 labels=output.labels,
             )
 
-        threshold = (
-            float(getattr(inf, "threshold", DEFAULT_MASK_THRESHOLD))
-            if inf is not None
-            else DEFAULT_MASK_THRESHOLD
-        )
-        min_box_area = (
-            int(getattr(inf, "min_box_area", DEFAULT_MIN_BOX_AREA))
-            if inf is not None
-            else DEFAULT_MIN_BOX_AREA
-        )
+        threshold = float(getattr(inf, "threshold", 0.5)) if inf is not None else 0.5
+        min_box_area = int(getattr(inf, "min_box_area", 1)) if inf is not None else 1
 
         return self._filter(output, threshold, min_box_area)
 

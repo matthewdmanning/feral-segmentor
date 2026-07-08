@@ -1,16 +1,15 @@
 import torch
 from omegaconf import OmegaConf
 
-from feral_segmentor import constants as C
 from feral_segmentor.training.losses import dice_loss, segmentation_loss
 
 
 def _make_cfg(**overrides):
     defaults = {
-        "dice_weight": C.DEFAULT_DICE_WEIGHT,
-        "bce_weight": C.DEFAULT_BCE_WEIGHT,
-        "distill_weight": C.DEFAULT_DISTILL_WEIGHT,
-        "distill_temperature": C.DEFAULT_DISTILL_TEMPERATURE,
+        "dice_weight": 1.0,
+        "bce_weight": 1.0,
+        "distill_weight": 0.0,
+        "distill_temperature": 1.0,
     }
     return OmegaConf.create({**defaults, **overrides})
 

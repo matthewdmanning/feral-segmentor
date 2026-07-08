@@ -3,7 +3,6 @@ import numpy as np
 import pytest
 import torch
 
-from feral_segmentor.constants import DEFAULT_IMAGE_SIZE
 from feral_segmentor.data.dataset import SegmentationDataset
 from feral_segmentor.data.fetch import fetch_data
 from feral_segmentor.data.transforms import preprocess
@@ -29,7 +28,7 @@ def test_preprocess_shape_and_range(tiny_image):
     tensor = preprocess(tiny_image)
     assert isinstance(tensor, torch.Tensor)
     assert tensor.dtype == torch.float32
-    assert tuple(tensor.shape) == (3, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    assert tuple(tensor.shape) == (3, 256, 256)
     assert float(tensor.min()) >= 0.0
     assert float(tensor.max()) <= 1.0
 
@@ -37,7 +36,7 @@ def test_preprocess_shape_and_range(tiny_image):
 def test_preprocess_grayscale(tiny_image):
     gray = cv2.cvtColor(tiny_image, cv2.COLOR_BGR2GRAY)
     tensor = preprocess(gray)
-    assert tuple(tensor.shape) == (3, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    assert tuple(tensor.shape) == (3, 256, 256)
 
 
 def _write_synthetic_dataset(root, count=3, size=32):
@@ -60,9 +59,9 @@ def test_dataset_shapes_and_len(tmp_path):
 
     image_tensor, mask_tensor = dataset[0]
     assert image_tensor.dtype == torch.float32
-    assert tuple(image_tensor.shape) == (3, DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    assert tuple(image_tensor.shape) == (3, 256, 256)
     assert mask_tensor.dtype == torch.int64
-    assert tuple(mask_tensor.shape) == (DEFAULT_IMAGE_SIZE, DEFAULT_IMAGE_SIZE)
+    assert tuple(mask_tensor.shape) == (256, 256)
 
 
 def test_dataset_missing_dirs_raises(tmp_path):

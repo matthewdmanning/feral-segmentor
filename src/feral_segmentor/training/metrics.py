@@ -15,7 +15,6 @@ import hydra
 import torch
 from omegaconf import DictConfig
 
-from feral_segmentor import constants as C
 from feral_segmentor.config.store import register_configs
 from feral_segmentor.io_utils import write_json
 from feral_segmentor.utils import get_logger
@@ -132,7 +131,7 @@ def main(cfg: DictConfig) -> None:
         return
 
     try:
-        payload = torch.load(ckpt_path, map_location=C.DEFAULT_DEVICE)
+        payload = torch.load(ckpt_path, map_location="cpu")
     except Exception as exc:  # noqa: BLE001 - robustness for the DVC stage
         logger.warning(
             "failed to load %s (%s); writing default metrics", ckpt_path, exc

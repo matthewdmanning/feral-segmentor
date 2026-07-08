@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 from omegaconf import OmegaConf
 
-from feral_segmentor import constants as C
 from feral_segmentor.data.augmentations import (
     BrightnessShift,
     GammaAdjust,
@@ -35,7 +34,7 @@ def test_build_chain_applies_inner_first():
     # ops = [HorizontalFlip, BrightnessShift]: flip first, then add brightness.
     chain = build_chain(_aug_cfg(["HorizontalFlip", "BrightnessShift"]))
     sample = np.array([[0.0, 0.2, 0.4]])
-    expected = np.clip(np.flip(sample, axis=1) + C.DEFAULT_BRIGHTNESS_SHIFT, 0.0, 1.0)
+    expected = np.clip(np.flip(sample, axis=1) + 0.1, 0.0, 1.0)
     np.testing.assert_allclose(chain.augment(sample), expected)
 
 
@@ -53,7 +52,7 @@ def test_horizontal_flip_mirrors_width():
 
 def test_random_rotate90_deterministic():
     sample = np.array([[1.0, 2.0], [3.0, 4.0]])
-    expected = np.rot90(sample, k=C.DEFAULT_ROTATE90_K, axes=(0, 1))
+    expected = np.rot90(sample, k=1, axes=(0, 1))
     np.testing.assert_array_equal(RandomRotate90().augment(sample), expected)
 
 
