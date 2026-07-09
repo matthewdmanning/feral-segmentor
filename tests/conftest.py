@@ -141,6 +141,67 @@ def mock_teacher():
 
 
 # ---------------------------------------------------------------------------
+# Bounding-box model fixtures
+# ---------------------------------------------------------------------------
+
+
+def make_bbox_test_net(
+    in_channels: int = 3,
+    num_boxes: int = 1,
+    box_format: str = "cxcywh",
+) -> nn.Module:
+    """Build a minimal bbox-regression network for use as a real model in tests.
+
+    Parameters
+    ----------
+    in_channels : int
+        Number of input image channels (3 for RGB).
+    num_boxes : int
+        Number of boxes predicted per image.
+    box_format : {"cxcywh", "xyxy"}
+        Encoding of the raw (unconstrained, unnormalised) output coordinates.
+
+    Returns
+    -------
+    nn.Module
+        Network mapping ``(B, in_channels, H, W)`` to ``(B, num_boxes, 4)``.
+
+    Raises
+    ------
+    ValueError
+        If ``box_format`` is not ``"cxcywh"`` or ``"xyxy"``.
+    """
+    if box_format not in ("cxcywh", "xyxy"):
+        raise ValueError(f"box_format must be 'cxcywh' or 'xyxy', got {box_format!r}")
+
+    class _BBoxRegressionNet(nn.Module):
+        """Tiny conv + global-pool + linear head producing raw box coordinates."""
+
+        def __init__(self, c_in: int, k: int, fmt: str) -> None:
+            super().__init__()
+            self.num_boxes = k
+            self.box_format = fmt
+            self.feat = nn.Sequential(
+                nn.Conv2d(c_in, 16, kernel_size=3, padding=1),
+                nn.ReLU(inplace=True),
+                nn.AdaptiveAvgPool2d((1, 1)),
+            )
+            self.head = nn.Linear(16, k * 4)
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            z = self.feat(x).flatten(1)
+            return self.head(z).view(-1, self.num_boxes, 4)
+
+    return _BBoxRegressionNet(in_channels, num_boxes, box_format)
+
+
+@pytest.fixture
+def bbox_test_net_factory():
+    """Factory fixture returning make_bbox_test_net for per-test box-count/format control."""
+    return make_bbox_test_net
+
+
+# ---------------------------------------------------------------------------
 # Optimizer / scheduler fixtures
 # ---------------------------------------------------------------------------
 
