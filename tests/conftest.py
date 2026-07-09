@@ -25,16 +25,17 @@ def tiny_image():
 
 @pytest.fixture
 def fixture_dataset_root():
-    """Path to the 8-sample test dataset (images/ + masks/ subdirs)."""
+    """Path to the 8-sample test dataset (images/ + annotations/ subdirs)."""
     return FIXTURES_DIR
 
 
 @pytest.fixture
 def fixture_dataset():
-    """SegmentationDataset over the 8 committed fixture samples."""
-    from feral_segmentor.data.dataset import SegmentationDataset
+    """AnnotationDataset over the 8 committed fixture samples."""
+    from feral_segmentor.data.dataset import AnnotationDataset
+    from feral_segmentor.io_utils import DatasetSource
 
-    return SegmentationDataset(str(FIXTURES_DIR))
+    return AnnotationDataset(DatasetSource(FIXTURES_DIR))
 
 
 @pytest.fixture

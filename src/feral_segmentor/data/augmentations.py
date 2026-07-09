@@ -12,6 +12,7 @@ from feral_segmentor.utils import get_logger
 log = get_logger(__name__)
 
 
+
 class Augmentation(abc.ABC):
     """Composes via constructor chaining: Outer(Inner()).augment(x) == Outer._apply(Inner._apply(x))."""
 

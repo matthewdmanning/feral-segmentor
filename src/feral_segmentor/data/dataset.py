@@ -1,100 +1,132 @@
-"""Paired image / annotation dataset."""
+"""Paired image / annotation datasets backed by a :class:`~feral_segmentor.io_utils.DatasetSource`."""
 
 from __future__ import annotations
 
-import math
-from pathlib import Path
-from typing import Iterator
+from typing import TYPE_CHECKING, Any, Callable, Iterator
 
-from PIL import Image
+import torch
 from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
-from feral_segmentor.data.annotations import Annotation, BBoxAnnotation, MaskAnnotation
-
-_IMAGES_DIR = "images"
-_ANNOTATIONS_DIR = "annotations"
+if TYPE_CHECKING:
+    from feral_segmentor.io_utils import DatasetSource
 
 
-def _load_image(path: Path) -> Image.Image:
-    return Image.open(path)
+class AnnotationDataset(Dataset[tuple[torch.Tensor, Any]]):
+    """Map-style dataset for on-disk image / annotation pairs.
 
+    Delegates all filesystem scanning and disk I/O to the injected
+    :class:`~feral_segmentor.io_utils.DatasetSource`. Pass a
+    ``target_transform`` to convert annotations to tensors eagerly on each
+    ``__getitem__`` call, or omit it to receive raw
+    :class:`~feral_segmentor.data.annotations.Annotation` objects for lazy
+    downstream conversion.
 
-def _load_annotation(path: Path) -> Annotation:
-    suffix = path.suffix.lower()
-    if suffix in {".jpg", ".jpeg", ".png", ".bmp"}:
-        return MaskAnnotation(path=path).load()
-    if suffix == ".txt":
-        return BBoxAnnotation(path=path).load()
-    raise NotImplementedError(f"no annotation loader for {suffix!r}: {path}")
+    Parameters
+    ----------
+    source : DatasetSource
+        Scanned and indexed data source that owns all file I/O.
+    transform : callable, optional
+        Applied to the image tensor after loading.
+    target_transform : callable, optional
+        Applied to the ``list[Annotation]`` after loading.
+    """
 
-
-def _load_sample(
-    img_path: Path, ann_paths: list[Path]
-) -> tuple[Image.Image, list[Annotation]]:
-    return _load_image(img_path), [_load_annotation(p) for p in ann_paths]
-
-
-def _build_index(root: Path) -> list[tuple[Path, list[Path]]]:
-    images_dir = root / _IMAGES_DIR
-    annotations_dir = root / _ANNOTATIONS_DIR
-
-    if not images_dir.is_dir():
-        raise FileNotFoundError(f"images directory not found: {images_dir}")
-    if not annotations_dir.is_dir():
-        raise FileNotFoundError(f"annotations directory not found: {annotations_dir}")
-
-    annotations_by_stem: dict[str, list[Path]] = {}
-    for p in sorted(annotations_dir.iterdir()):
-        if p.is_file() and p.stem != "names":
-            annotations_by_stem.setdefault(p.stem, []).append(p)
-
-    samples: list[tuple[Path, list[Path]]] = []
-    for image_path in sorted(images_dir.iterdir()):
-        if not image_path.is_file():
-            continue
-        ann_paths = annotations_by_stem.get(image_path.stem)
-        if ann_paths is None:
-            raise FileNotFoundError(
-                f"no annotation matching image stem {image_path.stem!r}"
-                f" in {annotations_dir}"
-            )
-        samples.append((image_path, ann_paths))
-
-    if not samples:
-        raise FileNotFoundError(f"no images found in {images_dir}")
-
-    return samples
-
-
-class AnnotationDataset(Dataset[tuple[Image.Image, list[Annotation]]]):
-    """Map-style dataset for on-disk image / annotation pairs."""
-
-    def __init__(self, root: str | Path) -> None:
-        self.root = Path(root)
-        self.samples = _build_index(self.root)
+    def __init__(
+        self,
+        source: DatasetSource,
+        transform: Callable | None = None,
+        target_transform: Callable | None = None,
+    ) -> None:
+        self.source = source
+        self.transform = transform
+        self.target_transform = target_transform
 
     def __len__(self) -> int:
-        return len(self.samples)
+        """Return the number of samples in the dataset.
 
-    def __getitem__(self, index: int) -> tuple[Image.Image, list[Annotation]]:
-        img_path, ann_paths = self.samples[index]
-        return _load_sample(img_path, ann_paths)
+        Returns
+        -------
+        int
+            Total number of image / annotation pairs.
+        """
+        return len(self.source)
+
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, Any]:
+        """Return the image and annotation(s) for a single sample.
+
+        Parameters
+        ----------
+        index : int
+            Sample index.
+
+        Returns
+        -------
+        tuple[torch.Tensor, Any]
+            ``(image, annotations)`` where image is ``(C, H, W)`` uint8.
+            ``annotations`` is a ``list[Annotation]`` when no
+            ``target_transform`` is set, or the transform's output otherwise.
+        """
+        image, annotations = self.source.load(index)
+
+        if self.transform is not None:
+            image = self.transform(image)
+        if self.target_transform is not None:
+            annotations = self.target_transform(annotations)
+
+        return image, annotations
 
 
-class StreamingAnnotationDataset(IterableDataset[tuple[Image.Image, list[Annotation]]]):
-    """Iterable dataset for streaming image / annotation pairs."""
+class StreamingAnnotationDataset(IterableDataset[tuple[torch.Tensor, Any]]):
+    """Iterable dataset for streaming image / annotation pairs.
 
-    def __init__(self, root: str | Path) -> None:
-        self.root = Path(root)
-        self.samples = _build_index(self.root)
+    Functionally equivalent to :class:`AnnotationDataset` but implements
+    ``__iter__`` for use as a streaming source. Workload is automatically
+    partitioned across DataLoader workers via
+    :func:`~torch.utils.data.get_worker_info` using
+    :meth:`~feral_segmentor.io_utils.DatasetSource.partition`.
 
-    def __iter__(self) -> Iterator[tuple[Image.Image, list[Annotation]]]:
+    Parameters
+    ----------
+    source : DatasetSource
+        Scanned and indexed data source that owns all file I/O.
+    transform : callable, optional
+        Applied to each image tensor after loading.
+    target_transform : callable, optional
+        Applied to each ``list[Annotation]`` after loading.
+    """
+
+    def __init__(
+        self,
+        source: DatasetSource,
+        transform: Callable | None = None,
+        target_transform: Callable | None = None,
+    ) -> None:
+        self.source = source
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __iter__(self) -> Iterator[tuple[torch.Tensor, Any]]:
+        """Yield image / annotation pairs for this worker's partition.
+
+        Returns
+        -------
+        Iterator[tuple[torch.Tensor, Any]]
+            Yields ``(image, annotations)`` pairs. Each DataLoader worker
+            receives a contiguous slice of the full sample index.
+        """
         worker_info = get_worker_info()
-        if worker_info is None:
-            samples = self.samples
-        else:
-            per_worker = math.ceil(len(self.samples) / worker_info.num_workers)
-            start = worker_info.id * per_worker
-            samples = self.samples[start : start + per_worker]
-        for img_path, ann_paths in samples:
-            yield _load_sample(img_path, ann_paths)
+        source = (
+            self.source.partition(worker_info.id, worker_info.num_workers)
+            if worker_info is not None
+            else self.source
+        )
+
+        for i in range(len(source)):
+            image, annotations = source.load(i)
+
+            if self.transform is not None:
+                image = self.transform(image)
+            if self.target_transform is not None:
+                annotations = self.target_transform(annotations)
+
+            yield image, annotations
