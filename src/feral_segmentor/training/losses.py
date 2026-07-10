@@ -79,15 +79,22 @@ def segmentation_loss(
 ) -> torch.Tensor:
     """Weighted Dice + cross-entropy, with optional distillation.
 
-    Args:
-        logits: Student class logits ``(B, C, H, W)``.
-        target: Long class-index mask ``(B, H, W)``.
-        cfg: ``TrainConfig``/``DictConfig`` with ``dice_weight``, ``bce_weight``,
-            ``distill_weight`` and ``distill_temperature``.
-        teacher_logits: Teacher logits ``(B, C, H, W)``; only required when
-            ``cfg.distill_weight > 0``.
+    Parameters
+    ----------
+    logits : torch.Tensor
+        Student class logits ``(B, C, H, W)``.
+    target : torch.Tensor
+        Long class-index mask ``(B, H, W)``.
+    cfg : Any
+        ``TrainConfig``/``DictConfig`` with ``dice_weight``, ``bce_weight``,
+        ``distill_weight`` and ``distill_temperature``.
+    teacher_logits : torch.Tensor, optional
+        Teacher logits ``(B, C, H, W)``; only required when
+        ``cfg.distill_weight > 0``.
 
-    Returns:
+    Returns
+    -------
+    torch.Tensor
         Scalar combined loss.
     """
     num_classes = logits.shape[1]

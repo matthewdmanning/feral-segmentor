@@ -18,15 +18,20 @@ def build_optimizer(
     params: Iterable[nn.Parameter],
     cfg_optim: object,
 ) -> torch.optim.Optimizer:
-    """Instantiate and return an optimizer bound to *params*.
+    """Instantiate and return an optimizer bound to ``params``.
 
-    Args:
-        params: Parameter iterable (e.g. ``model.parameters()``).
-        cfg_optim: An ``OptimConfig`` DictConfig with ``_target_`` and
-            ``_partial_: true`` set.
+    Parameters
+    ----------
+    params : Iterable[nn.Parameter]
+        Parameter iterable (e.g. ``model.parameters()``).
+    cfg_optim : object
+        An ``OptimConfig`` DictConfig with ``_target_`` and
+        ``_partial_: true`` set.
 
-    Returns:
-        Configured :class:`torch.optim.Optimizer` instance.
+    Returns
+    -------
+    torch.optim.Optimizer
+        Configured optimizer instance.
     """
     from hydra.utils import instantiate
 
@@ -39,13 +44,18 @@ def build_scheduler(
 ) -> torch.optim.lr_scheduler.LRScheduler | None:
     """Instantiate and return an LR scheduler, or ``None``.
 
-    Args:
-        optimizer: The optimizer whose learning rate is scheduled.
-        cfg_scheduler: A ``SchedulerConfig`` DictConfig with ``_target_`` and
-            ``_partial_: true`` set, or ``None`` to disable scheduling.
+    Parameters
+    ----------
+    optimizer : torch.optim.Optimizer
+        The optimizer whose learning rate is scheduled.
+    cfg_scheduler : object or None
+        A ``SchedulerConfig`` DictConfig with ``_target_`` and
+        ``_partial_: true`` set, or ``None`` to disable scheduling.
 
-    Returns:
-        :class:`~torch.optim.lr_scheduler.LRScheduler` or ``None``.
+    Returns
+    -------
+    torch.optim.lr_scheduler.LRScheduler or None
+        Configured scheduler instance, or ``None`` when disabled.
     """
     if cfg_scheduler is None:
         return None
@@ -58,12 +68,16 @@ def build_scheduler(
 def build_loss_fn(cfg_loss_fn: object) -> nn.Module:
     """Instantiate and return a loss function module.
 
-    Args:
-        cfg_loss_fn: A ``LossFnConfig`` DictConfig with ``_target_`` set
-            (no ``_partial_``; loss functions are instantiated directly).
+    Parameters
+    ----------
+    cfg_loss_fn : object
+        A ``LossFnConfig`` DictConfig with ``_target_`` set (no
+        ``_partial_``; loss functions are instantiated directly).
 
-    Returns:
-        :class:`torch.nn.Module` instance (e.g. ``CrossEntropyLoss``).
+    Returns
+    -------
+    torch.nn.Module
+        Configured loss instance (e.g. ``CrossEntropyLoss``).
     """
     from hydra.utils import instantiate
 

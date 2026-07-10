@@ -4,10 +4,10 @@ Each model source (local file, cloud storage, online hub) has a concrete subclas
 in this package. The training loop and registry workflow use the concrete class directly.
 
 ### Model Loading (training loop)
-- fetch(cfg) -> nn.Module
+- ``fetch(cfg) -> nn.Module``
 
 ### Model Registering
-- inspect(cfg, *, fetch_if_needed=False) -> ModelProperties
+- ``inspect(cfg, *, fetch_if_needed=False) -> ModelProperties``
 """
 
 from __future__ import annotations
