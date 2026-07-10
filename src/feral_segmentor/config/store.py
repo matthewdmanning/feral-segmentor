@@ -1,9 +1,11 @@
 """Register structured-config schemas with Hydra's ConfigStore.
 
-We register one schema per config-group *variant* (e.g. ``model/base_hub``).
+We register one schema per config-group *variant* (e.g. ``model/base_model``).
 Each YAML under ``conf/<group>/`` opts in with ``defaults: [base_<variant>]`` so
-it merges onto the typed node. ``register_configs`` is idempotent so it can be
-called from every Hydra entrypoint without double-registration errors.
+it merges onto the typed node.
+
+``register_configs`` is idempotent so it can be called from every Hydra
+entrypoint without double-registration errors.
 """
 
 from __future__ import annotations
@@ -15,6 +17,27 @@ from feral_segmentor.config.schema import (
     DataConfig,
     InferenceConfig,
     ModelConfig,
+    # Loss base + variants
+    LossFnConfig,
+    CrossEntropyConfig,
+    BCEWithLogitsConfig,
+    MSELossConfig,
+    L1LossConfig,
+    NLLLossConfig,
+    # Optim base + variants
+    OptimConfig,
+    AdamWConfig,
+    AdamConfig,
+    SGDConfig,
+    RMSpropConfig,
+    RAdamConfig,
+    # Scheduler base + variants
+    SchedulerConfig,
+    CosineAnnealingConfig,
+    LinearLRConfig,
+    StepLRConfig,
+    ReduceLROnPlateauConfig,
+    CosineWarmRestartsConfig,
     TrackingConfig,
     TrainConfig,
 )
@@ -25,6 +48,29 @@ _SCHEMAS: tuple[tuple[str, str, type], ...] = (
     ("data", "base_data", DataConfig),
     ("model", "base_model", ModelConfig),
     ("train", "base_train", TrainConfig),
+    # Base schemas — type contracts for TrainConfig fields
+    ("train/optim", "base_optim", OptimConfig),
+    ("train/loss_fn", "base_loss_fn", LossFnConfig),
+    ("train/scheduler", "base_scheduler", SchedulerConfig),
+    # Optim variants
+    ("train/optim", "adamw", AdamWConfig),
+    ("train/optim", "adam", AdamConfig),
+    ("train/optim", "sgd", SGDConfig),
+    ("train/optim", "rmsprop", RMSpropConfig),
+    ("train/optim", "radam", RAdamConfig),
+    # Scheduler variants
+    ("train/scheduler", "cosine", CosineAnnealingConfig),
+    ("train/scheduler", "linear", LinearLRConfig),
+    ("train/scheduler", "step", StepLRConfig),
+    ("train/scheduler", "plateau", ReduceLROnPlateauConfig),
+    ("train/scheduler", "warmrestarts", CosineWarmRestartsConfig),
+    # Loss variants
+    ("train/loss_fn", "cross_entropy", CrossEntropyConfig),
+    ("train/loss_fn", "bce_with_logits", BCEWithLogitsConfig),
+    ("train/loss_fn", "mse", MSELossConfig),
+    ("train/loss_fn", "l1", L1LossConfig),
+    ("train/loss_fn", "nll", NLLLossConfig),
+    # Other configs
     ("inference", "base_inference", InferenceConfig),
     ("tracking", "base_tracking", TrackingConfig),
     ("augmentation", "base_augmentation", AugmentationConfig),

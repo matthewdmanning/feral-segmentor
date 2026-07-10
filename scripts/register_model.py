@@ -91,7 +91,6 @@ def main() -> None:
             {
                 "registered": args.model_id,
                 "model_outputs": [t.value for t in props.model_outputs],
-                "n_classes": props.n_classes,
                 "metadata": metadata,
             },
             indent=2,

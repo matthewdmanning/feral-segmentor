@@ -30,8 +30,8 @@ def _resolve_callable(dotted: str) -> Callable | None:
 
 def _write_data_yaml(cfg: DictConfig, data_dir: str | Path) -> Path:
     """Generate a YOLO data.yaml from Hydra DataConfig and return its path."""
-    data_dir = Path(data_dir)
-    names_path = data_dir / "labels" / "names.yaml"
+    data_path = Path(data_dir)
+    names_path = data_path / "labels" / "names.yaml"
 
     # Load class names written by coco_to_yolo --names.
     if names_path.exists():

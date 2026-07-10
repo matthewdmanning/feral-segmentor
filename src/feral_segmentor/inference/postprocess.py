@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 import torch
 
-from feral_segmentor.constants import BOX_COORD_COUNT, DEFAULT_MIN_BOX_AREA
+from feral_segmentor.constants import BOX_COORD_COUNT
 
 # Morphology kernel side length for the open/close cleanup pass.
 MORPH_KERNEL_SIZE: int = 3
@@ -38,9 +38,7 @@ def clean_mask(mask: torch.Tensor) -> torch.Tensor:
     return torch.from_numpy(closed.astype(bool))
 
 
-def masks_to_boxes(
-    mask: torch.Tensor, min_box_area: int = DEFAULT_MIN_BOX_AREA
-) -> torch.Tensor:
+def masks_to_boxes(mask: torch.Tensor, min_box_area: int = 1) -> torch.Tensor:
     """Derive xyxy boxes from a binary foreground mask via connected components.
 
     Each connected blob in the (H, W) boolean mask becomes one box. Boxes with

@@ -4,10 +4,10 @@ Each model source (local file, cloud storage, online hub) has a concrete subclas
 in this package. The training loop and registry workflow use the concrete class directly.
 
 ### Model Loading (training loop)
-- fetch(cfg) -> nn.Module
+- ``fetch(cfg) -> nn.Module``
 
 ### Model Registering
-- inspect(cfg, *, fetch_if_needed=False) -> ModelProperties
+- ``inspect(cfg, *, fetch_if_needed=False) -> ModelProperties``
 """
 
 from __future__ import annotations
@@ -34,10 +34,9 @@ class SourceAdapter:
 
 
 def _inspect_loaded(model: nn.Module) -> tuple[ModelProperties, dict]:
-    """Infer n_classes from the last Linear or Conv2d layer of a loaded model."""
     for _, mod in reversed(list(model.named_modules())):
         if isinstance(mod, nn.Linear):
-            return ModelProperties(n_classes=mod.out_features), {}
+            return ModelProperties(), {}
         if isinstance(mod, nn.Conv2d):
-            return ModelProperties(n_classes=mod.out_channels), {}
+            return ModelProperties(), {}
     return ModelProperties(), {}

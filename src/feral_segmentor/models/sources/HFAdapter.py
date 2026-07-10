@@ -59,7 +59,6 @@ class HFAdapter(SourceAdapter):
             tag = getattr(info, "pipeline_tag", None)
             model_cfg = getattr(info, "config", None) or {}
             props = ModelProperties(
-                n_classes=model_cfg.get("num_labels") or model_cfg.get("num_classes"),
                 model_outputs=_TAG_TO_OUTPUTS.get(tag or "", []),
             )
             metadata = {

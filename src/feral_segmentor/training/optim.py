@@ -1,122 +1,84 @@
 """Optimizer and LR-scheduler builders.
 
-Registries map config names directly to PyTorch classes. Per-variant config
-dataclasses declare the hyperparameters each class expects; ``build_optimizer``
-and ``build_scheduler`` pull matching fields from the Hydra TrainConfig.
+Thin wrappers over ``hydra.utils.instantiate`` so callers don't need to import
+Hydra directly.  Each :class:`OptimConfig` / :class:`SchedulerConfig` carries
+``_target_`` and ``_partial_: true``, so instantiate returns a factory that
+still needs its first positional argument (``params`` / ``optimizer``).
 """
 
 from __future__ import annotations
 
-import dataclasses
 from collections.abc import Iterable
-from dataclasses import dataclass
-from typing import Any
 
 import torch
 from torch import nn
 
-from feral_segmentor import constants as C
 
+def build_optimizer(
+    params: Iterable[nn.Parameter],
+    cfg_optim: object,
+) -> torch.optim.Optimizer:
+    """Instantiate and return an optimizer bound to ``params``.
 
-# --- Per-variant config dataclasses -----------------------------------------
+    Parameters
+    ----------
+    params : Iterable[nn.Parameter]
+        Parameter iterable (e.g. ``model.parameters()``).
+    cfg_optim : object
+        An ``OptimConfig`` DictConfig with ``_target_`` and
+        ``_partial_: true`` set.
 
+    Returns
+    -------
+    torch.optim.Optimizer
+        Configured optimizer instance.
+    """
+    from hydra.utils import instantiate
 
-@dataclass
-class AdamConfig:
-    lr: float = C.DEFAULT_LR
-    weight_decay: float = C.DEFAULT_WEIGHT_DECAY
-
-
-@dataclass
-class SGDConfig:
-    lr: float = C.DEFAULT_LR
-    weight_decay: float = C.DEFAULT_WEIGHT_DECAY
-    momentum: float = C.DEFAULT_MOMENTUM
-
-
-@dataclass
-class StepLRConfig:
-    step_size: int = C.DEFAULT_SCHEDULER_STEP_SIZE
-    gamma: float = C.DEFAULT_SCHEDULER_GAMMA
-
-
-@dataclass
-class CosineAnnealingLRConfig:
-    T_max: int = C.DEFAULT_EPOCHS
-
-
-# --- Registries: name → PyTorch class ---------------------------------------
-
-_OPTIMIZERS: dict[str, type[torch.optim.Optimizer]] = {
-    "adam": torch.optim.Adam,
-    "sgd": torch.optim.SGD,
-}
-
-_OPTIMIZER_CONFIGS: dict[str, type] = {
-    "adam": AdamConfig,
-    "sgd": SGDConfig,
-}
-
-_SCHEDULERS: dict[str, type[torch.optim.lr_scheduler.LRScheduler]] = {
-    "step": torch.optim.lr_scheduler.StepLR,
-    "cosine": torch.optim.lr_scheduler.CosineAnnealingLR,
-}
-
-_SCHEDULER_CONFIGS: dict[str, type] = {
-    "step": StepLRConfig,
-    "cosine": CosineAnnealingLRConfig,
-}
-
-# cfg field name → constructor kwarg name for cases that differ
-_SCHEDULER_FIELD_MAP: dict[str, dict[str, str]] = {
-    "cosine": {"T_max": "epochs"},  # CosineAnnealingLR.T_max ← cfg.epochs
-}
-
-
-# --- Public builders --------------------------------------------------------
-
-
-def build_optimizer(params: Iterable[nn.Parameter], cfg: Any) -> torch.optim.Optimizer:
-    """Construct the optimizer named by ``cfg.optimizer``."""
-    name = str(cfg.optimizer)
-    try:
-        cls = _OPTIMIZERS[name]
-        cfg_cls = _OPTIMIZER_CONFIGS[name]
-    except KeyError:
-        raise ValueError(
-            f"unknown optimizer {name!r}; choose from {sorted(_OPTIMIZERS)}"
-        ) from None
-    kwargs: dict[str, Any] = {
-        f.name: v
-        for f in dataclasses.fields(cfg_cls)
-        if (v := getattr(cfg, f.name, f.default)) is not dataclasses.MISSING
-    }
-    return cls(params, **kwargs)
+    return instantiate(cfg_optim)(params)
 
 
 def build_scheduler(
-    optimizer: torch.optim.Optimizer, cfg: Any
+    optimizer: torch.optim.Optimizer,
+    cfg_scheduler: object | None,
 ) -> torch.optim.lr_scheduler.LRScheduler | None:
-    """Construct the LR scheduler named by ``cfg.scheduler``.
+    """Instantiate and return an LR scheduler, or ``None``.
 
-    Returns ``None`` for ``"none"`` so callers can skip ``scheduler.step()``
-    when the result is falsy.
+    Parameters
+    ----------
+    optimizer : torch.optim.Optimizer
+        The optimizer whose learning rate is scheduled.
+    cfg_scheduler : object or None
+        A ``SchedulerConfig`` DictConfig with ``_target_`` and
+        ``_partial_: true`` set, or ``None`` to disable scheduling.
+
+    Returns
+    -------
+    torch.optim.lr_scheduler.LRScheduler or None
+        Configured scheduler instance, or ``None`` when disabled.
     """
-    name = str(cfg.scheduler)
-    if name == "none":
+    if cfg_scheduler is None:
         return None
-    try:
-        cls = _SCHEDULERS[name]
-        cfg_cls = _SCHEDULER_CONFIGS[name]
-    except KeyError:
-        raise ValueError(
-            f"unknown scheduler {name!r}; choose from {sorted(_SCHEDULERS)}"
-        ) from None
-    field_map = _SCHEDULER_FIELD_MAP.get(name, {})
-    kwargs: dict[str, Any] = {
-        f.name: v
-        for f in dataclasses.fields(cfg_cls)
-        if (v := getattr(cfg, field_map.get(f.name, f.name), f.default))
-        is not dataclasses.MISSING
-    }
-    return cls(optimizer, **kwargs)
+
+    from hydra.utils import instantiate
+
+    return instantiate(cfg_scheduler)(optimizer)
+
+
+def build_loss_fn(cfg_loss_fn: object) -> nn.Module:
+    """Instantiate and return a loss function module.
+
+    Parameters
+    ----------
+    cfg_loss_fn : object
+        A ``LossFnConfig`` DictConfig with ``_target_`` set (no
+        ``_partial_``; loss functions are instantiated directly).
+
+    Returns
+    -------
+    torch.nn.Module
+        Configured loss instance (e.g. ``CrossEntropyLoss``).
+    """
+    from hydra.utils import instantiate
+
+    return instantiate(cfg_loss_fn)

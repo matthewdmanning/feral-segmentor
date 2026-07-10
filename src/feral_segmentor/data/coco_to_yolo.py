@@ -1,10 +1,13 @@
 """Convert COCO instance segmentation annotations to YOLO segmentation format.
 
-Output per image: a .txt file with one line per annotation:
-    <class_id> <x1> <y1> <x2> <y2> ... <xn> <yn>
-where coordinates are normalised to [0, 1] by image width/height.
+Output per image is a .txt file with one line per annotation::
 
-Usage (offline, run once before pushing to GCS):
+    <class_id> <x1> <y1> <x2> <y2> ... <xn> <yn>
+
+Coordinates are normalised to [0, 1] by image width/height.
+
+Usage (offline, run once before pushing to GCS)::
+
     python -m feral_segmentor.data.coco_to_yolo \\
         --ann data/raw/annotations/coco_train2017/instances_train2017_animals.json \\
         --out data/raw/labels/coco_train2017/

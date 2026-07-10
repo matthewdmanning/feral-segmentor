@@ -12,31 +12,29 @@ a constant from :mod:`feral_segmentor.constants` (no magic numbers).
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Optional
 
 from omegaconf import MISSING
-
-from feral_segmentor import constants as C
 
 
 # --- Data -------------------------------------------------------------------
 @dataclass
 class DataConfig:
-    source: str = C.DEFAULT_DATA_SOURCE
+    source: str = "local"
     root: str = "data"
-    image_size: int = C.DEFAULT_IMAGE_SIZE
-    val_split: float = C.DEFAULT_VAL_SPLIT
+    image_size: int = 256
+    val_split: float = 0.2
     # Per-class morphological similarity to the target species (cat=1.0 anchor).
     # Length must match num_classes in the dataset. Empty list = uniform weights.
     class_similarity: list[float] = field(default_factory=list)
 
 
-# --- Model ------------------------------------------------------------------
+# --- Model --------------------------------------------------------------
 @dataclass
 class SourceConfig:
     """Where a model architecture or weights come from. Resolved by source adapter."""
 
-    source: str = MISSING  # discriminator: hf_hub | yolo_hub | local | url | ...
+    source: str = MISSING  # discriminator: hf_hub | torch_hub | ultralytics | ...
     id: str = MISSING  # hub repo ID, model name, dotted class path, or URL
     location: Optional[str] = None  # local path; None = hub loads directly into memory
 
@@ -59,38 +57,182 @@ class ModelConfig:
     weights: Optional[WeightsConfig] = None
 
 
+# --- Training sub-configs ---------------------------------------------------
+@dataclass
+class OptimConfig:
+    """Base contract for optimizer configs. Subclass for each concrete variant."""
+
+    _target_: str = MISSING
+    _partial_: bool = True
+
+
+@dataclass
+class LossFnConfig:
+    """Base contract for loss function configs. Subclass for each concrete variant."""
+
+    _target_: str = MISSING
+
+
+@dataclass
+class SchedulerConfig:
+    """Base contract for scheduler configs. Subclass for each concrete variant."""
+
+    _target_: str = MISSING
+    _partial_: bool = True
+
+
+# --- Optim variants ---------------------------------------------------------
+@dataclass
+class AdamWConfig(OptimConfig):
+    _target_: str = "torch.optim.AdamW"
+    lr: float = 1e-3
+    betas: list[float] = field(default_factory=lambda: [0.9, 0.999])
+    eps: float = 1e-8
+    weight_decay: float = 1e-2
+    amsgrad: bool = False
+
+
+@dataclass
+class AdamConfig(OptimConfig):
+    _target_: str = "torch.optim.Adam"
+    lr: float = 1e-3
+    betas: list[float] = field(default_factory=lambda: [0.9, 0.999])
+    eps: float = 1e-8
+    weight_decay: float = 0.0
+    amsgrad: bool = False
+
+
+@dataclass
+class SGDConfig(OptimConfig):
+    _target_: str = "torch.optim.SGD"
+    lr: float = 1e-2
+    momentum: float = 0.9
+    dampening: float = 0.0
+    weight_decay: float = 0.0
+    nesterov: bool = False
+
+
+@dataclass
+class RMSpropConfig(OptimConfig):
+    _target_: str = "torch.optim.RMSprop"
+    lr: float = 1e-2
+    alpha: float = 0.99
+    eps: float = 1e-8
+    weight_decay: float = 0.0
+    momentum: float = 0.0
+    centered: bool = False
+
+
+@dataclass
+class RAdamConfig(OptimConfig):
+    _target_: str = "torch.optim.RAdam"
+    lr: float = 1e-3
+    betas: list[float] = field(default_factory=lambda: [0.9, 0.999])
+    eps: float = 1e-8
+    weight_decay: float = 0.0
+
+
+# --- Scheduler variants -----------------------------------------------------
+@dataclass
+class CosineAnnealingConfig(SchedulerConfig):
+    _target_: str = "torch.optim.lr_scheduler.CosineAnnealingLR"
+    T_max: int = 50
+    eta_min: float = 0.0
+    last_epoch: int = -1
+
+
+@dataclass
+class LinearLRConfig(SchedulerConfig):
+    _target_: str = "torch.optim.lr_scheduler.LinearLR"
+    start_factor: float = 0.3333333333333333
+    end_factor: float = 1.0
+    total_iters: int = 5
+    last_epoch: int = -1
+
+
+@dataclass
+class StepLRConfig(SchedulerConfig):
+    _target_: str = "torch.optim.lr_scheduler.StepLR"
+    step_size: int = 10
+    gamma: float = 0.1
+    last_epoch: int = -1
+
+
+@dataclass
+class ReduceLROnPlateauConfig(SchedulerConfig):
+    _target_: str = "torch.optim.lr_scheduler.ReduceLROnPlateau"
+    mode: str = "min"
+    factor: float = 0.1
+    patience: int = 10
+    threshold: float = 1e-4
+    threshold_mode: str = "rel"
+    cooldown: int = 0
+    min_lr: float = 0.0
+    eps: float = 1e-8
+
+
+@dataclass
+class CosineWarmRestartsConfig(SchedulerConfig):
+    _target_: str = "torch.optim.lr_scheduler.CosineAnnealingWarmRestarts"
+    T_0: int = 10
+    T_mult: int = 1
+    eta_min: float = 0.0
+    last_epoch: int = -1
+
+
+# --- Loss variants ----------------------------------------------------------
+@dataclass
+class CrossEntropyConfig(LossFnConfig):
+    _target_: str = "torch.nn.CrossEntropyLoss"
+    reduction: str = "mean"
+    label_smoothing: float = 0.0
+    ignore_index: int = -100
+
+
+@dataclass
+class BCEWithLogitsConfig(LossFnConfig):
+    _target_: str = "torch.nn.BCEWithLogitsLoss"
+    reduction: str = "mean"
+
+
+@dataclass
+class MSELossConfig(LossFnConfig):
+    _target_: str = "torch.nn.MSELoss"
+    reduction: str = "mean"
+
+
+@dataclass
+class L1LossConfig(LossFnConfig):
+    _target_: str = "torch.nn.L1Loss"
+    reduction: str = "mean"
+
+
+@dataclass
+class NLLLossConfig(LossFnConfig):
+    _target_: str = "torch.nn.NLLLoss"
+    reduction: str = "mean"
+    ignore_index: int = -100
+
+
 # --- Training ---------------------------------------------------------------
 @dataclass
 class TrainConfig:
-    epochs: int = C.DEFAULT_EPOCHS
-    lr: float = C.DEFAULT_LR
-    batch_size: int = C.DEFAULT_BATCH_SIZE
-    optimizer: str = C.DEFAULT_OPTIMIZER
-    scheduler: str = C.DEFAULT_SCHEDULER
-    weight_decay: float = C.DEFAULT_WEIGHT_DECAY
-    momentum: float = C.DEFAULT_MOMENTUM
-    num_workers: int = C.DEFAULT_NUM_WORKERS
-    scheduler_step_size: int = C.DEFAULT_SCHEDULER_STEP_SIZE
-    scheduler_gamma: float = C.DEFAULT_SCHEDULER_GAMMA
-    dice_weight: float = C.DEFAULT_DICE_WEIGHT
-    bce_weight: float = C.DEFAULT_BCE_WEIGHT
-    distill_weight: float = C.DEFAULT_DISTILL_WEIGHT
-    distill_temperature: float = C.DEFAULT_DISTILL_TEMPERATURE
-    # Similarity-weighted training. Set use_similarity=true to activate.
-    # similarity_loss / similarity_sampler are dotted import paths to callables
-    # resolved at runtime via importlib; "none" disables each respectively.
-    use_similarity: bool = False
-    similarity_loss: str = "none"
-    similarity_sampler: str = "none"
+    epochs: int = 50
+    batch_size: int = 32
+    num_workers: int = 0
+    device: str = "cuda"
+    optim: OptimConfig = MISSING
+    loss_fn: LossFnConfig = MISSING
+    scheduler: SchedulerConfig = MISSING
 
 
 # --- Inference --------------------------------------------------------------
 @dataclass
 class InferenceConfig:
-    threshold: float = C.DEFAULT_MASK_THRESHOLD
-    device: str = C.DEFAULT_DEVICE
-    tta: bool = C.DEFAULT_TTA
-    min_box_area: int = C.DEFAULT_MIN_BOX_AREA
+    threshold: float = 0.5
+    device: str = "cpu"
+    tta: bool = False
+    min_box_area: int = 1
 
 
 # --- Experiment tracking ----------------------------------------------------
@@ -104,13 +246,9 @@ class TrackingConfig:
 @dataclass
 class AugmentationConfig:
     name: str = MISSING
-    # Each op is a dict with a required 'name' key (short Albumentations class
-    # name or fully-qualified path) plus any kwargs the transform accepts.
-    # Short names are resolved via getattr(albumentations, name); fully qualified
-    # names (containing a dot) are resolved via importlib. Per-op kwargs flow
-    # directly to the transform constructor, so any Albumentations transform is
-    # supported without a registry.
-    ops: list[Any] = field(default_factory=list)
+    # Ordered list of registered augmentation op names; the chain builder maps
+    # each name to a concrete Augmentation (params sourced from constants).
+    ops: list[str] = field(default_factory=list)
 
 
 # --- Top-level (type-hint convenience; group schemas are what get registered) ---

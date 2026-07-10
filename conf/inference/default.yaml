@@ -5,3 +5,4 @@ defaults:
 threshold: 0.5
 device: gpu
 tta: false
+min_box_area: 1

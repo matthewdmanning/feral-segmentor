@@ -20,11 +20,10 @@ def register_model(
     metadata: dict | None = None,
 ) -> None:
     """Write model config and properties to the registry file."""
-    registry = _load_file()
+    registry = json.loads(_REGISTRY_PATH.read_text())
     entry: dict = {
         "config": OmegaConf.to_container(cfg, resolve=True),
         "model_outputs": [t.value for t in properties.model_outputs],
-        "n_classes": properties.n_classes,
     }
     if metadata:
         entry.update(metadata)
@@ -34,14 +33,22 @@ def register_model(
 
 def load_model_registry(name: str) -> ModelProperties:
     """Read a registered model's properties from the registry file."""
-    registry = _load_file()
+    registry = json.loads(_REGISTRY_PATH.read_text())
     if name not in registry:
         raise KeyError(f"model {name!r} not in registry; call register_model() first")
     entry = registry[name]
     return ModelProperties(
-        n_classes=entry.get("n_classes"),
         model_outputs=[CVTask(t) for t in entry.get("model_outputs", [])],
     )
+
+
+def get_adapter(source: str):
+    """Return the :class:`SourceAdapter` instance registered for ``source``.
+
+    Public entrypoint over :func:`_get_adapter` for callers outside the registry
+    workflow (e.g. the training stage, which needs only ``fetch``).
+    """
+    return _get_adapter(source)
 
 
 def _get_adapter(source: str):
@@ -76,9 +83,3 @@ def _get_adapter(source: str):
         f"no adapter for source {source!r}; "
         f"add SOURCE_KEY = {source!r} to an adapter in {sources_dir}"
     )
-
-
-def _load_file() -> dict:
-    if _REGISTRY_PATH.exists():
-        return json.loads(_REGISTRY_PATH.read_text())
-    return {}

@@ -1,81 +1,132 @@
-"""Paired image/mask dataset for semantic segmentation."""
+"""Paired image / annotation datasets backed by a :class:`~feral_segmentor.io_utils.DatasetSource`."""
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable, Iterator
 
-import cv2
-import numpy as np
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, IterableDataset, get_worker_info
 
-from feral_segmentor.constants import DEFAULT_IMAGE_SIZE
-from feral_segmentor.data.transforms import preprocess
-
-# Subdirectories expected under the dataset root.
-_IMAGES_DIR = "images"
-_MASKS_DIR = "masks"
+if TYPE_CHECKING:
+    from feral_segmentor.io_utils import DatasetSource
 
 
-class SegmentationDataset(Dataset):
-    """Dataset of ``(image, mask)`` pairs read from disk.
+class AnnotationDataset(Dataset[tuple[torch.Tensor, Any]]):
+    """Map-style dataset for on-disk image / annotation pairs.
 
-    Expects images under ``<root>/images`` and masks under ``<root>/masks`` with
-    matching filename stems. Images are preprocessed into normalized CHW float
-    tensors; masks are loaded single-channel, resized with nearest-neighbour
-    interpolation (to preserve class ids), and returned as ``H x W`` long
-    tensors.
+    Delegates all filesystem scanning and disk I/O to the injected
+    :class:`~feral_segmentor.io_utils.DatasetSource`. Pass a
+    ``target_transform`` to convert annotations to tensors eagerly on each
+    ``__getitem__`` call, or omit it to receive raw
+    :class:`~feral_segmentor.data.annotations.Annotation` objects for lazy
+    downstream conversion.
+
+    Parameters
+    ----------
+    source : DatasetSource
+        Scanned and indexed data source that owns all file I/O.
+    transform : callable, optional
+        Applied to the image tensor after loading.
+    target_transform : callable, optional
+        Applied to the ``list[Annotation]`` after loading.
     """
 
-    def __init__(self, root: str, image_size: int = DEFAULT_IMAGE_SIZE) -> None:
-        self.root = Path(root)
-        self.image_size = image_size
-        self.images_dir = self.root / _IMAGES_DIR
-        self.masks_dir = self.root / _MASKS_DIR
-
-        if not self.images_dir.is_dir():
-            raise FileNotFoundError(f"images directory not found: {self.images_dir}")
-        if not self.masks_dir.is_dir():
-            raise FileNotFoundError(f"masks directory not found: {self.masks_dir}")
-
-        # Index image files; require a matching mask (by stem) for each.
-        masks_by_stem = {
-            p.stem: p for p in sorted(self.masks_dir.iterdir()) if p.is_file()
-        }
-        self.samples: list[tuple[Path, Path]] = []
-        for image_path in sorted(self.images_dir.iterdir()):
-            if not image_path.is_file():
-                continue
-            mask_path = masks_by_stem.get(image_path.stem)
-            if mask_path is None:
-                raise FileNotFoundError(
-                    f"no mask matching image stem {image_path.stem!r} in {self.masks_dir}"
-                )
-            self.samples.append((image_path, mask_path))
-
-        if not self.samples:
-            raise FileNotFoundError(f"no images found in {self.images_dir}")
+    def __init__(
+        self,
+        source: DatasetSource,
+        transform: Callable | None = None,
+        target_transform: Callable | None = None,
+    ) -> None:
+        self.source = source
+        self.transform = transform
+        self.target_transform = target_transform
 
     def __len__(self) -> int:
-        return len(self.samples)
+        """Return the number of samples in the dataset.
 
-    def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor]:
-        image_path, mask_path = self.samples[index]
+        Returns
+        -------
+        int
+            Total number of image / annotation pairs.
+        """
+        return len(self.source)
 
-        image = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
-        if image is None:
-            raise FileNotFoundError(f"failed to read image: {image_path}")
-        image_tensor = preprocess(image, size=self.image_size)
+    def __getitem__(self, index: int) -> tuple[torch.Tensor, Any]:
+        """Return the image and annotation(s) for a single sample.
 
-        mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
-        if mask is None:
-            raise FileNotFoundError(f"failed to read mask: {mask_path}")
-        # Nearest-neighbour keeps integer class ids intact during resize.
-        mask = cv2.resize(
-            mask,
-            (self.image_size, self.image_size),
-            interpolation=cv2.INTER_NEAREST,
+        Parameters
+        ----------
+        index : int
+            Sample index.
+
+        Returns
+        -------
+        tuple[torch.Tensor, Any]
+            ``(image, annotations)`` where image is ``(C, H, W)`` uint8.
+            ``annotations`` is a ``list[Annotation]`` when no
+            ``target_transform`` is set, or the transform's output otherwise.
+        """
+        image, annotations = self.source.load(index)
+
+        if self.transform is not None:
+            image = self.transform(image)
+        if self.target_transform is not None:
+            annotations = self.target_transform(annotations)
+
+        return image, annotations
+
+
+class StreamingAnnotationDataset(IterableDataset[tuple[torch.Tensor, Any]]):
+    """Iterable dataset for streaming image / annotation pairs.
+
+    Functionally equivalent to :class:`AnnotationDataset` but implements
+    ``__iter__`` for use as a streaming source. Workload is automatically
+    partitioned across DataLoader workers via
+    :func:`~torch.utils.data.get_worker_info` using
+    :meth:`~feral_segmentor.io_utils.DatasetSource.partition`.
+
+    Parameters
+    ----------
+    source : DatasetSource
+        Scanned and indexed data source that owns all file I/O.
+    transform : callable, optional
+        Applied to each image tensor after loading.
+    target_transform : callable, optional
+        Applied to each ``list[Annotation]`` after loading.
+    """
+
+    def __init__(
+        self,
+        source: DatasetSource,
+        transform: Callable | None = None,
+        target_transform: Callable | None = None,
+    ) -> None:
+        self.source = source
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __iter__(self) -> Iterator[tuple[torch.Tensor, Any]]:
+        """Yield image / annotation pairs for this worker's partition.
+
+        Returns
+        -------
+        Iterator[tuple[torch.Tensor, Any]]
+            Yields ``(image, annotations)`` pairs. Each DataLoader worker
+            receives a contiguous slice of the full sample index.
+        """
+        worker_info = get_worker_info()
+        source = (
+            self.source.partition(worker_info.id, worker_info.num_workers)
+            if worker_info is not None
+            else self.source
         )
-        mask_tensor = torch.from_numpy(mask.astype(np.int64))
 
-        return image_tensor, mask_tensor
+        for i in range(len(source)):
+            image, annotations = source.load(i)
+
+            if self.transform is not None:
+                image = self.transform(image)
+            if self.target_transform is not None:
+                annotations = self.target_transform(annotations)
+
+            yield image, annotations
