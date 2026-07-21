@@ -16,8 +16,8 @@ def _write_executable(path: Path, content: str) -> None:
     path.chmod(0o755)
 
 
-def test_container_training_persists_mlflow_backend_store_to_gcs(tmp_path):
-    """A completed container run preserves MLflow metadata beyond the SSD."""
+def test_container_training_uses_configured_persistent_mlflow_tracking_uri(tmp_path):
+    """Training reports to the shared MLflow server, not a local SQLite store."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     call_log = tmp_path / "gcloud.log"
@@ -34,13 +34,8 @@ def test_container_training_persists_mlflow_backend_store_to_gcs(tmp_path):
     )
     _write_executable(
         bin_dir / "mlflow",
-        "#!/usr/bin/env bash\n"
-        "mkdir -p \"${DATA_DIR}/mlflow\"\n"
-        ": > \"${DATA_DIR}/mlflow/mlflow.db\"\n"
-        "trap 'exit 0' TERM\n"
-        "while true; do /bin/sleep 1; done\n",
+        "#!/usr/bin/env bash\necho 'local MLflow must not start' >&2\nexit 99\n",
     )
-
     env = {
         **os.environ,
         "PATH": f"{bin_dir}:{os.environ['PATH']}",
@@ -49,8 +44,7 @@ def test_container_training_persists_mlflow_backend_store_to_gcs(tmp_path):
         "DATA_DIR": str(data_dir),
         "GCS_BUCKET": "feral-training",
         "GCS_DATA_PREFIX": "inputs/baseline",
-        "MLFLOW_ARTIFACT_PREFIX": "runs/baseline",
-        "MLFLOW_STARTUP_DELAY_SECONDS": "0",
+        "MLFLOW_TRACKING_URI": "https://mlflow.example.run.app",
     }
 
     subprocess.run(
@@ -63,11 +57,8 @@ def test_container_training_persists_mlflow_backend_store_to_gcs(tmp_path):
     )
 
     calls = call_log.read_text().splitlines()
-    assert (
-        f"storage rsync -r {data_dir}/mlflow/ "
-        "gs://feral-training/runs/baseline/tracking/"
-    ) in calls
+    assert all("/mlflow/" not in call for call in calls)
     assert (
         f"-m feral_vision.training.trainer --config-name runs/baseline "
-        f"data.root={data_dir} tracking.tracking_uri=http://localhost:5000"
+        f"data.root={data_dir} tracking.tracking_uri=https://mlflow.example.run.app"
     ) in python_log.read_text().splitlines()

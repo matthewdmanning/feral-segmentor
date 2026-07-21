@@ -45,12 +45,14 @@ The following are out of scope:
   mounted in the container at `/data`.
 - Bucket names, project IDs, and instance settings are supplied at runtime via
   environment variables or `gcloud`, never baked into the image.
-- The GCP container workflow runs MLflow as a sidecar on the training instance.
-  Per the
+- MLflow is deployed as a shared Cloud Run service. Its backend store is a
+  Cloud SQL PostgreSQL database and its artifact store is a GCS bucket. The
+  training container receives the Cloud Run tracking URI; it does not start a
+  local MLflow server or copy a SQLite database to GCS. Per the
   [tooling boundary](../../ARCHITECTURE.md#7-tooling-boundaries), run-generated
-  model artifacts, including checkpoints, belong to MLflow. When its artifact
-  store is GCS, MLflow writes them to its configured artifact prefix; do not
-  upload checkpoints to a parallel GCS location directly.
+  model artifacts belong to MLflow. MLflow writes only the selected best model
+  artifact to its configured GCS prefix; do not upload intermediate checkpoints
+  to a parallel GCS location directly.
 
 ## Non-functional constraints
 

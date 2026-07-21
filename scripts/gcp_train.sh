@@ -3,6 +3,7 @@ set -euo pipefail
 
 : "${GCP_PROJECT:?GCP_PROJECT must be set}"
 : "${GCS_BUCKET:?GCS_BUCKET must be set}"
+: "${MLFLOW_TRACKING_URI:?MLFLOW_TRACKING_URI must be set}"
 
 VM_NAME="${VM_NAME:-feral-vision-trainer}"
 VM_ZONE="${VM_ZONE:-us-central1-a}"
@@ -15,7 +16,6 @@ IMAGE_TAG="${IMAGE_TAG:-latest}"
 SSD_MOUNT="${SSD_MOUNT:-/mnt/disks/ssd}"
 DATA_DIR="${DATA_DIR:-/data}"
 GCS_DATA_PREFIX="${GCS_DATA_PREFIX:-}"
-MLFLOW_ARTIFACT_PREFIX="${MLFLOW_ARTIFACT_PREFIX:-mlflow}"
 RUN_RECIPE="${RUN_RECIPE:-baseline}"
 
 IMAGE_URI="${REGION}-docker.pkg.dev/${GCP_PROJECT}/${REPO}/${IMAGE_NAME}:${IMAGE_TAG}"
@@ -49,7 +49,7 @@ gcloud compute ssh "$VM_NAME" --zone="$VM_ZONE" --project="$GCP_PROJECT" --comma
     -e GCP_PROJECT=${GCP_PROJECT} \
     -e GCS_BUCKET=${GCS_BUCKET} \
     -e GCS_DATA_PREFIX=${GCS_DATA_PREFIX} \
-    -e MLFLOW_ARTIFACT_PREFIX=${MLFLOW_ARTIFACT_PREFIX} \
+    -e MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI} \
     -e RUN_RECIPE=${RUN_RECIPE} \
     -e HYDRA_OVERRIDES='train.epochs=${EPOCHS}' \
     ${IMAGE_URI}

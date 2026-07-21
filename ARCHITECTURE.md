@@ -14,6 +14,15 @@ section below stale, update this document in the same change.
 resolves to the canonical `<root>/images/`, `<root>/annotations/` layout (see
 [Dataset Folder Schema](CLAUDE.md#dataset-folder-schema)).
 
+Data acquisition, augmentation, and DVC versioning are human-directed data
+operations performed before deployment. Cloud training has one data path:
+
+`source → Cloud Storage bucket → Docker on the cloud server → local container data → training`
+
+The bucket contains the prepared, versioned data artifact. The container copies
+that artifact to its local data directory and then invokes the canonical training
+entrypoint; it does not fetch, augment, or run DVC.
+
 `"coco"` is one example source (`fetch_coco`) among others (`"local"` via
 `fetch_data`, and any future remote id). The source is a dispatch point, not a fixed
 enum — do not describe or design around `"coco"` as if it were special-cased or the
@@ -82,7 +91,8 @@ wires `model_builder` (`models/register_model.py`) and `build_optimizer` /
 `hydra.utils.instantiate` wrappers over `conf/train/{optim,scheduler,loss_fn}/*.yaml`)
 into a `Trainer`. `Trainer.fit(dataloader, val_dataset)` runs the epoch loop, logs
 each metric to MLflow via `_try_log_metric` (a no-op if no run is active), tracks
-the best score, and writes the best checkpoint to `models/registry/best.pt`.
+the best score, and writes a local best checkpoint. At completion, MLflow stores
+only that selected best model artifact; intermediate checkpoints are not uploaded.
 
 The loss function is config-selected (`conf/train/loss_fn/*.yaml`:
 `cross_entropy`, `mse`, `l1`, `nll`, `bce_with_logits`). `training/losses.py`'s

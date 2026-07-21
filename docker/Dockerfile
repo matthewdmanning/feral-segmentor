@@ -46,6 +46,7 @@ RUN pip install \
 # Install feral-vision package.
 WORKDIR /app
 COPY pyproject.toml ./
+COPY dvc.yaml ./
 COPY src/ ./src/
 RUN pip install -e .
 

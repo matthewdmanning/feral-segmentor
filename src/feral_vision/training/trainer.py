@@ -4,15 +4,17 @@ The :class:`Trainer` is deliberately decoupled from how its collaborators are
 built: it receives an already-constructed ``model``, ``optimizer``, ``loss_fn``
 and (optionally) ``scheduler``. This keeps the loop trivially unit-testable with
 dummies. :func:`build_trainer` wires the *real* collaborators from the other
-units and is the only path that imports them; it is exercised by the DVC
-``train`` stage entrypoint (:func:`main`), never by the trainer's own tests.
+units and is exercised by the canonical training entrypoint (:func:`main`).
 """
 
 from __future__ import annotations
 
+import copy
 from contextlib import contextmanager
+import hashlib
 import math
 from pathlib import Path
+import subprocess
 from typing import TYPE_CHECKING, Any, Callable, Iterable, Iterator
 
 if TYPE_CHECKING:
@@ -27,6 +29,8 @@ logger = get_logger(__name__)
 
 DEFAULT_BEST_MODEL_PATH: str = "models/registry/best.pt"
 INITIAL_BEST_LOSS: float = math.inf
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_DVC_PIPELINE_PATH = _PROJECT_ROOT / "dvc.yaml"
 
 LossFn = Callable[[Any, Any], torch.Tensor]
 
@@ -55,13 +59,38 @@ def _try_log_metric(name: str, value: float, step: int) -> None:
         pass
 
 
-def _try_log_artifact(path: Path, artifact_path: str) -> None:
-    """Log an artifact when an MLflow run is active without breaking training."""
+def _dvc_data_version(tracker_path: Path) -> str:
+    """Identify a staged DVC tracker without running DVC."""
+    if tracker_path.name == "data.dvc":
+        digest = hashlib.sha256(tracker_path.read_bytes()).hexdigest()
+        return f"data.dvc@sha256:{digest}"
+
+    try:
+        commit = subprocess.check_output(
+            ["git", "-C", str(_PROJECT_ROOT), "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
+        return f"dvc.yaml@{commit}"
+    except (OSError, subprocess.CalledProcessError):
+        digest = hashlib.sha256(_DVC_PIPELINE_PATH.read_bytes()).hexdigest()
+        return f"dvc.yaml@sha256:{digest}"
+
+
+def _try_log_dvc_lineage(cfg: Any) -> None:
+    """Record the DVC pipeline metadata and tracker file in an active MLflow run."""
     try:
         import mlflow
 
-        if mlflow.active_run() is not None:
-            mlflow.log_artifact(str(path), artifact_path=artifact_path)
+        data_root = getattr(getattr(cfg, "data", None), "root", None)
+        staged_tracker = Path(str(data_root)) / "data.dvc" if data_root else None
+        tracker_path = (
+            staged_tracker
+            if staged_tracker is not None and staged_tracker.exists()
+            else _DVC_PIPELINE_PATH
+        )
+        if mlflow.active_run() is not None and tracker_path.exists():
+            mlflow.log_param("dvc_data_version", _dvc_data_version(tracker_path))
+            mlflow.log_artifact(str(tracker_path), artifact_path="data_lineage")
     except Exception:  # pragma: no cover - logging must never break training
         pass
 
@@ -137,6 +166,7 @@ class Trainer:
         self.scheduler = scheduler
         self.best_model_path = Path(best_model_path)
         self.best_loss = INITIAL_BEST_LOSS
+        self._input_example: torch.Tensor | None = None
 
     def _move(self, tensor: Any) -> Any:
         return tensor.to(self.device) if isinstance(tensor, torch.Tensor) else tensor
@@ -148,6 +178,8 @@ class Trainer:
         for inputs, targets in dataloader:
             inputs = self._move(inputs)
             targets = self._move(targets)
+            if self._input_example is None:
+                self._input_example = inputs.detach().cpu()
 
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
@@ -189,6 +221,44 @@ class Trainer:
         self.best_model_path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(self.model.state_dict(), self.best_model_path)
 
+    def _try_log_model(self) -> None:
+        """Log only the selected best model to MLflow when possible."""
+        if self._input_example is None or not self.best_model_path.exists():
+            return
+
+        try:
+            import mlflow
+            from mlflow.models import infer_signature
+
+            if mlflow.active_run() is None:
+                return
+
+            current_state = copy.deepcopy(self.model.state_dict())
+            was_training = self.model.training
+            try:
+                best_state = torch.load(
+                    self.best_model_path, map_location=self.device, weights_only=True
+                )
+                self.model.load_state_dict(best_state)
+                input_example = self._input_example.numpy()
+                self.model.eval()
+                with torch.no_grad():
+                    predictions = self.model(self._move(self._input_example))
+                signature = infer_signature(
+                    input_example, predictions.detach().cpu().numpy()
+                )
+                mlflow.pytorch.log_model(
+                    self.model,
+                    name="pytorch_model",
+                    signature=signature,
+                    input_example=input_example,
+                )
+            finally:
+                self.model.load_state_dict(current_state)
+                self.model.train(was_training)
+        except Exception:  # pragma: no cover - logging must never break training
+            pass
+
     def fit(
         self,
         dataloader: Iterable[Any],
@@ -196,9 +266,9 @@ class Trainer:
     ) -> dict[str, Any]:
         """Train while recording the configured MLflow run when available."""
         with _active_mlflow_run(self.cfg):
+            _try_log_dvc_lineage(self.cfg)
             history = self._fit(dataloader, val_dataset)
-            if self.best_model_path.exists():
-                _try_log_artifact(self.best_model_path, artifact_path="checkpoints")
+            self._try_log_model()
             return history
 
     def _fit(

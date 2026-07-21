@@ -91,18 +91,22 @@ _Avoid_: Model lifecycle management, model tracking
 A reusable description of a model's architecture, acquisition source, expected outputs, and optional starting weights, independent of any run.
 _Avoid_: Checkpoint, model version
 
-**Model Registry**:
-The project's durable collection of Registered Model provenance links and the metadata necessary to load and run each model. It points to complete Model Versions without duplicating their artifacts or training-data lineage.
-_Avoid_: Experiment tracker, run record
+**Model Catalog**:
+The project's durable collection of static Model Definitions and the metadata needed to construct or inspect them, independent of a training run.
+_Avoid_: Model Registry, experiment tracker, run record
+
+**MLflow Model Registry**:
+The MLflow service that owns Registered Models and their Model Versions, including the lifecycle relationship from a trained Model Artifact to its originating Run Record.
+_Avoid_: Model Catalog, experiment tracker
 
 **Registered Model**:
-A named model identity in the Model Registry that groups its related Model Versions and their lineage.
-_Avoid_: Model artifact, training run
+A named identity in the MLflow Model Registry that groups related Model Versions.
+_Avoid_: Model Definition, Model Artifact, training run
 
 **Model Version**:
-A distinct pairing of an architecture revision and a learned weight set under a Registered Model. A change to the architecture's shape or to its weights creates a different Model Version.
-_Avoid_: Checkpoint, run, registered model
+A versioned MLflow Model Artifact under a Registered Model, linked to the Run Record that produced it. A change to learned weights creates a different Model Version.
+_Avoid_: Model Definition, checkpoint, run, registered model
 
 **Model Lifecycle Management**:
-The practice of registering, evaluating, promoting, and retiring Model Versions while preserving registry provenance, the metadata needed to load and run them, and experiment-tracked references to the exact DVC Data Artifacts used for training.
+The practice of registering, evaluating, promoting, and retiring Model Versions in the MLflow Model Registry while preserving their Run Record and Data Artifact references.
 _Avoid_: Experiment tracking, model tracking
