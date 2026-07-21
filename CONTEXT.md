@@ -50,8 +50,14 @@ A single named configuration file containing the key-value choices for one confi
 _Avoid_: Run recipe, configuration group
 
 **Run Recipe**:
-The complete, non-redundant collection of Configuration Variants required to run model training or inference, with no required concern missing.
-_Avoid_: Configuration variant, source defaults
+The complete, named, version-controlled declaration required to execute model
+training or inference: its Configuration Variants and the immutable Data
+Version it consumes. Its selected Model Definition may specify optional
+starting weights; when none are supplied, the run initializes randomly under
+its configured seed. A Run Recipe consumes a Data Version created by a prior
+human-directed Data Operation; it never fetches, augments, versions, or
+otherwise invokes DVC during training or inference.
+_Avoid_: Configuration variant, dataset derivation recipe, source defaults
 
 ## Experiment tracking
 

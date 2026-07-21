@@ -260,7 +260,7 @@ def build_trainer(cfg: Any) -> Trainer:
     """Use this function to wire a :class:`Trainer` with real collaborators from other units.
 
     Imports are local so this module imports cleanly even while collaborators
-    are skeletons; ``build_trainer`` is only called from the DVC entrypoint.
+    are skeletons; the canonical training entrypoint calls this function.
 
     Parameters
     ----------
@@ -296,7 +296,7 @@ def build_trainer(cfg: Any) -> Trainer:
 
 
 def main() -> None:
-    """DVC ``train`` stage entrypoint."""
+    """Execute the canonical Hydra-configured training entrypoint."""
     import hydra
     from hydra.utils import to_absolute_path
 
