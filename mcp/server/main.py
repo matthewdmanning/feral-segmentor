@@ -156,8 +156,8 @@ def inspect_model(
 ) -> str:
     """Use this function to inspect a model via its source adapter and return metadata as JSON.
 
-    Does NOT write to the MLflow Model Registry — use
-    ``scripts/register_model.py`` for that.
+    Does NOT write to the MLflow Model Registry. The deprecated registration
+    CLI has no supported replacement yet.
 
     Parameters
     ----------

@@ -50,12 +50,5 @@ COPY dvc.yaml ./
 COPY src/ ./src/
 RUN pip install -e .
 
-# Entrypoint and project-specific training workflow.
-COPY docker/entrypoint.sh /entrypoint.sh
-COPY scripts/container_train.sh /container_train.sh
-RUN chmod +x /entrypoint.sh /container_train.sh
-
 # /data is the SSD mount point: docker run -v /mnt/disks/ssd:/data
 VOLUME ["/data"]
-
-ENTRYPOINT ["/entrypoint.sh"]
