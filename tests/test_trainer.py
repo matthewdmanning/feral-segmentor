@@ -210,7 +210,7 @@ def test_fit_logs_best_model_weights_not_final_epoch_weights(tmp_path):
     mlflow.set_tracking_uri(tracking_uri)
     artifact_root = tmp_path / "artifacts"
     client = mlflow.tracking.MlflowClient(tracking_uri)
-    experiment_id = client.create_experiment(
+    client.create_experiment(
         "best-model-tests", artifact_location=artifact_root.as_uri()
     )
     cfg = SimpleNamespace(
