@@ -35,6 +35,38 @@ _DVC_PIPELINE_PATH = _PROJECT_ROOT / "dvc.yaml"
 LossFn = Callable[[Any, Any], torch.Tensor]
 
 
+def _resolved_config(cfg: Any) -> Any:
+    """Convert a Hydra config or lightweight config object into JSON-safe data."""
+    try:
+        from omegaconf import OmegaConf
+
+        if OmegaConf.is_config(cfg):
+            return OmegaConf.to_container(cfg, resolve=True, throw_on_missing=True)
+    except ImportError:  # pragma: no cover - OmegaConf is a project dependency
+        pass
+
+    if isinstance(cfg, dict):
+        return {key: _resolved_config(value) for key, value in cfg.items()}
+    if isinstance(cfg, (list, tuple)):
+        return [_resolved_config(value) for value in cfg]
+    if hasattr(cfg, "__dict__"):
+        return {key: _resolved_config(value) for key, value in vars(cfg).items()}
+    if isinstance(cfg, Path):
+        return str(cfg)
+    return cfg
+
+
+def _try_log_resolved_config(cfg: Any) -> None:
+    """Store the exact resolved Run Recipe in an active MLflow run."""
+    try:
+        import mlflow
+
+        if mlflow.active_run() is not None:
+            mlflow.log_dict(_resolved_config(cfg), "run_config/resolved_config.json")
+    except Exception:  # pragma: no cover - logging must never break training
+        pass
+
+
 def _try_log_metric(name: str, value: float, step: int) -> None:
     """Use this function to log a single metric to MLflow when a run is active.
 
@@ -230,7 +262,8 @@ class Trainer:
             import mlflow
             from mlflow.models import infer_signature
 
-            if mlflow.active_run() is None:
+            active_run = mlflow.active_run()
+            if active_run is None:
                 return
 
             current_state = copy.deepcopy(self.model.state_dict())
@@ -253,6 +286,16 @@ class Trainer:
                     signature=signature,
                     input_example=input_example,
                 )
+                model_cfg = getattr(self.cfg, "model", None)
+                architecture = getattr(model_cfg, "architecture", None)
+                registered_model_name = getattr(architecture, "id", None)
+                if registered_model_name:
+                    model_version = mlflow.register_model(
+                        model_uri=f"runs:/{active_run.info.run_id}/pytorch_model",
+                        name=registered_model_name,
+                    )
+                    mlflow.set_tag("registered_model_name", registered_model_name)
+                    mlflow.set_tag("model_version", model_version.version)
             finally:
                 self.model.load_state_dict(current_state)
                 self.model.train(was_training)
@@ -266,6 +309,7 @@ class Trainer:
     ) -> dict[str, Any]:
         """Train while recording the configured MLflow run when available."""
         with _active_mlflow_run(self.cfg):
+            _try_log_resolved_config(self.cfg)
             _try_log_dvc_lineage(self.cfg)
             history = self._fit(dataloader, val_dataset)
             self._try_log_model()
