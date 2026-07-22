@@ -15,6 +15,9 @@ The canonical training entrypoint is `training/trainer.py`.
 ## Commands
 
 ```bash
+# Mirrors the Dev and Training smoke GitHub Actions jobs.
+bash scripts/validate_ci.sh
+
 # Tests (use -m on Windows)
 uv run python -m pytest
 
