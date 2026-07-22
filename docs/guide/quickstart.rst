@@ -31,10 +31,3 @@ The canonical training entrypoint is ``feral_vision.training.trainer``:
    uv run python -m feral_vision.training.trainer
 
 See :doc:`training` for GCP training and further detail.
-
-Run inference
--------------
-
-Inference is not currently wired up. ``feral_vision.inference.predictor`` was
-removed pending a redesign of how a plain ``nn.Module.forward()`` output maps to a
-prediction contract — see ``docs/architecture/program-flow.md`` for details.
