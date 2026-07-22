@@ -40,4 +40,6 @@ example_augment.txt
 yolo11n-seg.pt
 docs/_build
 .vscode/tasks.json
-docs/external_refs/mlflow_examples.md
+
+# Local Codex authentication
+.codex/hooks/github_auth.py
